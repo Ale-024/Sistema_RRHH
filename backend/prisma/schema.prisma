@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password_hash String
+  rol           String    // "ADMIN" | "EMPLOYEE"
+  activo        Boolean   @default(true)
+  empleado      Empleado?
+}
+
+model Departamento {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  puestos     Puesto[]
+}
+
+model Puesto {
+  id              Int          @id @default(autoincrement())
+  titulo          String
+  departamento_id Int
+  departamento    Departamento @relation(fields: [departamento_id], references: [id])
+  empleados       Empleado[]
+}
+
+model Empleado {
+  id                  Int       @id @default(autoincrement())
+  usuario_id          Int       @unique
+  usuario             Usuario   @relation(fields: [usuario_id], references: [id])
+  puesto_id           Int
+  puesto              Puesto    @relation(fields: [puesto_id], references: [id])
+  nombres             String
+  apellidos           String
+  dni                 String    @unique
+  fecha_ingreso       DateTime
+  telefono            String?
+  direccion           String?
+  contacto_emergencia String?
+  telefono_emergencia String?
+  
+  asistencias         Asistencia[]
+  solicitudes         Solicitud[]
+  nominas             Nomina[]
+  notificaciones      Notificacion[]
+}
+
+model Asistencia {
+  id                 Int      @id @default(autoincrement())
+  empleado_id        Int
+  empleado           Empleado @relation(fields: [empleado_id], references: [id])
+  fecha_hora_entrada DateTime
+  fecha_hora_salida  DateTime?
+  estado             String   // "PRESENTE" | "RETARDO" | "FALTA"
+}
+
+model Solicitud {
+  id              Int      @id @default(autoincrement())
+  empleado_id     Int
+  empleado        Empleado @relation(fields: [empleado_id], references: [id])
+  tipo            String   // "VACACIONES" | "PERMISO"
+  fecha_solicitud DateTime @default(now())
+  fecha_inicio    DateTime
+  fecha_fin       DateTime
+  motivo          String
+  estado          String   @default("PENDIENTE") // "PENDIENTE" | "APROBADA" | "RECHAZADA"
+}
+
+model Nomina {
+  id             Int      @id @default(autoincrement())
+  empleado_id    Int
+  empleado       Empleado @relation(fields: [empleado_id], references: [id])
+  periodo_inicio DateTime
+  periodo_fin    DateTime
+  fecha_pago     DateTime
+  salario_bruto  Decimal
+  deducciones    Decimal
+  salario_neto   Decimal
+}
+
+model Notificacion {
+  id             Int      @id @default(autoincrement())
+  empleado_id    Int
+  empleado       Empleado @relation(fields: [empleado_id], references: [id])
+  mensaje        String
+  leida          Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+}
