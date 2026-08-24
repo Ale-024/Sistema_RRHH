@@ -28,6 +28,7 @@ function crearApp(ctx) {
 
   // Suscriptores de eventos -> bitacora de auditoria.
   registrarSuscriptores(c.bus, c.prisma);
+  permisos.registrarSuscriptores(c.bus, c.prisma);
 
   const app = express();
   app.locals.prisma = c.prisma;
@@ -39,10 +40,11 @@ function crearApp(ctx) {
   app.use(middlewareCors(ctx.entorno));
   app.use(contextoRequest);
 
-  // Zona de autoservicio: requiere token valido.
+  // Zona de autoservicio: requiere token valido y permisos efectivos.
   const routerEmpleado = express.Router();
   routerEmpleado.use(
     iam.verificarToken,
+    iam.cargarPermisos,
     ...[
       empleados.rutasEmpleado,
       asistencia.rutasEmpleado,

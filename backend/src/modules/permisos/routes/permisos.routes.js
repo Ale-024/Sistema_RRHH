@@ -1,51 +1,87 @@
 const express = require('express');
 const {
-  crearSolicitud,
+  actualizarSolicitud,
   cambiarEstado,
+  consulta,
+  crearSolicitud,
   idNumerico,
-} = require('./esquemas');
+  motivoOpcional,
+  motivoRequerido,
+} = require('../application/permisos.usecase');
+const esquemas = require('./esquemas');
 const validar = require('../../../shared/http/validar');
 const { exigirPermiso } = require('../../../shared/http/autorizacion');
-const {
-  aplicarAlcanceRelacion,
-} = require('../../../shared/dominio/alcance');
+const { aplicarAlcanceRelacion } = require('../../../shared/dominio/alcance');
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
 
-/**
- * Rutas del modulo permisos.
- * Contrato MVP: /api/employee/requests y /api/admin/requests.
- * La FSM completa del documento llega en la Fase 4; aqui se conserva
- * el comportamiento vigente con validacion de entrada.
- */
+function opcionesSolicitud() {
+  return {
+    tipoPermiso: true,
+    historial: { orderBy: { ocurridoEn: 'asc' } },
+  };
+}
+
+async function obtenerSolicitudPropia(prisma, id, empleadoId) {
+  const solicitud = await prisma.solicitudPermiso.findFirst({
+    where: { id, empleadoId },
+    include: opcionesSolicitud(),
+  });
+  if (!solicitud) {
+    throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Solicitud de permiso no encontrada.');
+  }
+  return solicitud;
+}
+
+function publicarCambio(bus, solicitud, evento, usuarioId) {
+  bus.publicar(evento, {
+    permisoId: solicitud.id,
+    folio: solicitud.folio,
+    empleadoId: solicitud.empleadoId,
+    usuarioId,
+    estado: solicitud.estado,
+  });
+}
+
 function rutasEmpleado(ctx) {
   const { prisma, bus } = ctx;
   const router = express.Router();
 
-  router.post('/requests', validar({ body: crearSolicitud }), async (req, res, next) => {
+  router.get('/requests/types', exigirPermiso('solicitudes:crear'), async (_req, res, next) => {
     try {
-      const solicitud = await prisma.solicitud.create({
-        data: {
-          empleado_id: req.user.empleado_id,
-          tipo: req.body.tipo,
-          fecha_inicio: req.body.fecha_inicio,
-          fecha_fin: req.body.fecha_fin,
-          motivo: req.body.motivo,
-          estado: 'PENDIENTE',
-        },
-      });
-      bus.publicar('SolicitudCreada', { solicitudId: solicitud.id });
-      res.json({ message: 'Solicitud creada exitosamente', data: solicitud });
+      res.json(await prisma.tipoPermiso.findMany({ where: { activo: true }, orderBy: { nombre: 'asc' } }));
     } catch (error) {
       next(error);
     }
   });
 
+  router.post(
+    '/requests',
+    exigirPermiso('solicitudes:crear'),
+    validar({ body: esquemas.crearSolicitud }),
+    async (req, res, next) => {
+      try {
+        const solicitud = await crearSolicitud({
+          prisma,
+          empleadoId: req.user.empleado_id,
+          usuarioId: req.user.id,
+          datos: req.body,
+          ip: req.ip,
+        });
+        publicarCambio(bus, solicitud, 'PermisoSolicitado', req.user.id);
+        res.status(201).json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
   router.get('/requests', async (req, res, next) => {
     try {
       res.json(
-        await prisma.solicitud.findMany({
-          where: { empleado_id: req.user.empleado_id },
-          orderBy: { fecha_solicitud: 'desc' },
+        await prisma.solicitudPermiso.findMany({
+          where: { empleadoId: req.user.empleado_id },
+          include: opcionesSolicitud(),
+          orderBy: { creadoEn: 'desc' },
         })
       );
     } catch (error) {
@@ -53,23 +89,90 @@ function rutasEmpleado(ctx) {
     }
   });
 
+  router.put(
+    '/requests/:id',
+    validar({ params: idNumerico, body: esquemas.actualizarSolicitud }),
+    async (req, res, next) => {
+      try {
+        const solicitud = await actualizarSolicitud({
+          prisma,
+          id: Number(req.params.id),
+          empleadoId: req.user.empleado_id,
+          datos: req.body,
+        });
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.post(
+    '/requests/:id/enviar',
+    validar({ params: idNumerico, body: motivoOpcional }),
+    async (req, res, next) => {
+      try {
+        await obtenerSolicitudPropia(prisma, Number(req.params.id), req.user.empleado_id);
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino: 'EN_REVISION',
+          usuarioId: req.user.id,
+          motivo: req.body.motivo,
+          ip: req.ip,
+        });
+        publicarCambio(bus, solicitud, 'PermisoEnviadoRevision', req.user.id);
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.post(
+    '/requests/:id/cancelar',
+    validar({ params: idNumerico, body: motivoOpcional }),
+    async (req, res, next) => {
+      try {
+        await obtenerSolicitudPropia(prisma, Number(req.params.id), req.user.empleado_id);
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino: 'CANCELADO',
+          usuarioId: req.user.id,
+          motivo: req.body.motivo,
+          ip: req.ip,
+        });
+        publicarCambio(bus, solicitud, 'PermisoCancelado', req.user.id);
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
   return router;
 }
 
 function rutasAdmin(ctx) {
-  const { prisma } = ctx;
+  const { prisma, bus } = ctx;
   const router = express.Router();
 
   router.get(
     '/requests',
     exigirPermiso('solicitudes:leer_global'),
+    validar({ query: consulta }),
     async (req, res, next) => {
       try {
+        const whereBase = req.query.estado ? { estado: req.query.estado } : {};
         res.json(
-          await prisma.solicitud.findMany({
-            where: aplicarAlcanceRelacion('empleado', {}, req.contexto),
-            include: { empleado: { include: { puesto: { include: { departamento: true } } } } },
-            orderBy: { fecha_solicitud: 'desc' },
+          await prisma.solicitudPermiso.findMany({
+            where: aplicarAlcanceRelacion('empleado', whereBase, req.contexto),
+            include: {
+              ...opcionesSolicitud(),
+              empleado: { include: { puesto: { include: { departamento: true } } } },
+            },
+            orderBy: { creadoEn: 'desc' },
           })
         );
       } catch (error) {
@@ -78,39 +181,95 @@ function rutasAdmin(ctx) {
     }
   );
 
-  router.put(
-    '/requests/:id/status',
-    exigirPermiso('solicitudes:revisar'),
-    validar({ params: idNumerico, body: cambiarEstado }),
+  router.post(
+    '/requests/:id/aprobar',
+    exigirPermiso('permisos:aprobar'),
+    validar({ params: idNumerico, body: motivoOpcional }),
     async (req, res, next) => {
       try {
-        const actual = await prisma.solicitud.findUnique({
-          where: { id: req.params.id },
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino: 'APROBADO',
+          usuarioId: req.user.id,
+          motivo: req.body.motivo,
+          ip: req.ip,
         });
-        if (!actual) {
-          throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Solicitud no encontrada.');
-        }
-        if (actual.estado !== 'PENDIENTE') {
-          throw new ErrorAplicacion(
-            'CONFLICTO_ESTADO',
-            409,
-            `La solicitud ya fue ${actual.estado.toLowerCase()}. No puede modificarse.`
-          );
-        }
+        publicarCambio(bus, solicitud, 'PermisoAprobado', req.user.id);
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 
-        const request = await prisma.solicitud.update({
-          where: { id: req.params.id },
-          data: { estado: req.body.estado },
+  router.post(
+    '/requests/:id/rechazar',
+    exigirPermiso('permisos:aprobar'),
+    validar({ params: idNumerico, body: motivoRequerido }),
+    async (req, res, next) => {
+      try {
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino: 'RECHAZADO',
+          usuarioId: req.user.id,
+          motivo: req.body.motivo,
+          ip: req.ip,
         });
+        publicarCambio(bus, solicitud, 'PermisoRechazado', req.user.id);
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 
-        await prisma.notificacion.create({
-          data: {
-            empleado_id: request.empleado_id,
-            mensaje: `Tu solicitud de ${request.tipo} ha sido ${request.estado}.`,
-          },
+  router.post(
+    '/requests/:id/solicitar-correccion',
+    exigirPermiso('permisos:aprobar'),
+    validar({ params: idNumerico, body: motivoRequerido }),
+    async (req, res, next) => {
+      try {
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino: 'SOLICITADO',
+          usuarioId: req.user.id,
+          motivo: req.body.motivo,
+          ip: req.ip,
         });
+        publicarCambio(bus, solicitud, 'PermisoCorreccionSolicitada', req.user.id);
+        res.json({ data: solicitud });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 
-        res.json(request);
+  // Adaptador temporal para clientes del MVP. Traduce APROBADA/RECHAZADA
+  // a la FSM nueva, sin permitir escrituras directas de estado.
+  router.put(
+    '/requests/:id/status',
+    exigirPermiso('permisos:aprobar'),
+    validar({ params: idNumerico, body: esquemas.cambiarEstado }),
+    async (req, res, next) => {
+      try {
+        const destino = req.body.estado;
+        const solicitud = await cambiarEstado({
+          prisma,
+          id: Number(req.params.id),
+          destino,
+          usuarioId: req.user.id,
+          ip: req.ip,
+        });
+        publicarCambio(
+          bus,
+          solicitud,
+          destino === 'APROBADO' ? 'PermisoAprobado' : 'PermisoRechazado',
+          req.user.id
+        );
+        res.json(solicitud);
       } catch (error) {
         next(error);
       }

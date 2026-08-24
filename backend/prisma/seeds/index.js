@@ -47,6 +47,22 @@ async function sembrarCatalogos() {
       },
     });
   }
+
+  const tipos = [
+    ['PERS', 'Permiso personal', true, 6, false, 'Politica interna de permisos'],
+    ['ENF', 'Enfermedad', true, 10, true, 'Constancia medica; validar con RRHH'],
+    ['LUTO', 'Duelo por fallecimiento de familiar', true, 5, true, 'Codigo de Trabajo y politica interna'],
+    ['MAT', 'Matrimonio', true, 5, true, 'Politica interna de permisos'],
+    ['PAT', 'Paternidad', true, 3, true, 'Legislacion laboral vigente'],
+    ['ESTU', 'Estudios', false, 10, true, 'Politica interna de permisos'],
+  ];
+  for (const [codigo, nombre, remunerado, diasMaxAnio, requiereSoporte, baseLegal] of tipos) {
+    await prisma.tipoPermiso.upsert({
+      where: { codigo },
+      update: { nombre, remunerado, diasMaxAnio, requiereSoporte, baseLegal, activo: true },
+      create: { codigo, nombre, remunerado, diasMaxAnio, requiereSoporte, baseLegal },
+    });
+  }
 }
 
 async function sembrarAdmin() {
@@ -96,19 +112,6 @@ async function sembrarAdmin() {
           { rolId: rrhhRol.id, scopeDepartamentoId: depto.id },
         ],
       },
-    },
-  });
-}
-
-async function sembrarCatalogos() {
-  await prisma.turno.create({
-    data: {
-      nombre: 'Administrativo',
-      horaEntrada: '08:00',
-      horaSalida: '17:00',
-      toleranciaMin: 10,
-      minutosAlmuerzo: 60,
-      diasSemana: '1,2,3,4,5',
     },
   });
 }

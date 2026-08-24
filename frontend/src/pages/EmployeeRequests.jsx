@@ -1,112 +1,142 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import { Calendar, Plus, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, FileEdit, Plus, Send, XCircle } from 'lucide-react';
+
+const ESTADOS = {
+  SOLICITADO: ['bg-slate-100 text-slate-700', 'Solicitado'],
+  EN_REVISION: ['bg-orange-100 text-orange-800', 'En revisión'],
+  APROBADO: ['bg-green-100 text-green-800', 'Aprobado'],
+  RECHAZADO: ['bg-red-100 text-red-800', 'Rechazado'],
+  CANCELADO: ['bg-slate-100 text-slate-500', 'Cancelado'],
+};
+
+const inicial = { tipoPermisoId: '', fechaInicio: '', fechaFin: '', motivo: '', soporteRuta: '' };
 
 export default function EmployeeRequests() {
   const [requests, setRequests] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [formData, setFormData] = useState(inicial);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    tipo: 'VACACIONES',
-    fecha_inicio: '',
-    fecha_fin: '',
-    motivo: ''
-  });
+  const [message, setMessage] = useState('');
 
-
-  const fetchRequests = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const res = await api.get('/employee/requests');
-      setRequests(res.data);
-    } catch (error) {
-      console.error(error);
+      const [requestsResponse, typesResponse] = await Promise.all([
+        api.get('/employee/requests'),
+        api.get('/employee/requests/types'),
+      ]);
+      setRequests(requestsResponse.data);
+      setTypes(typesResponse.data);
+      if (!formData.tipoPermisoId && typesResponse.data[0]) {
+        setFormData((current) => ({ ...current, tipoPermisoId: String(typesResponse.data[0].id) }));
+      }
+    } catch {
+      setMessage('No fue posible cargar el catálogo de permisos.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData.tipoPermisoId]);
 
   useEffect(() => {
-    // La carga inicial actualiza estado solo despues del await; el aviso
-    // react(set-state-in-effect) es un falso positivo en este patron.
+    // La carga inicial actualiza estado despues del await; es intencional.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRequests();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     try {
-      await api.post('/employee/requests', formData);
+      const created = await api.post('/employee/requests', {
+        ...formData,
+        tipoPermisoId: Number(formData.tipoPermisoId),
+      });
+      await api.post(`/employee/requests/${created.data.data.id}/enviar`, {});
       setShowModal(false);
-      setFormData({ tipo: 'VACACIONES', fecha_inicio: '', fecha_fin: '', motivo: '' });
-      fetchRequests();
-    } catch {
-      alert('Error al crear solicitud');
+      setFormData({ ...inicial, tipoPermisoId: formData.tipoPermisoId });
+      setMessage('Solicitud enviada a revisión.');
+      fetchData();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'No fue posible enviar la solicitud.');
     }
   };
 
-  const getStatusIcon = (estado) => {
-    switch (estado) {
-      case 'APROBADA': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-      case 'RECHAZADA': return <XCircle className="w-5 h-5 text-red-500" />;
-      default: return <Clock className="w-5 h-5 text-orange-500" />;
+  const handleCancel = async (id) => {
+    try {
+      await api.post(`/employee/requests/${id}/cancelar`, {});
+      setMessage('Solicitud cancelada.');
+      fetchData();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'No fue posible cancelar la solicitud.');
     }
   };
 
-  const getStatusBadge = (estado) => {
-    switch (estado) {
-      case 'APROBADA': return <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Aprobada</span>;
-      case 'RECHAZADA': return <span className="bg-red-100 text-red-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Rechazada</span>;
-      default: return <span className="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Pendiente</span>;
-    }
+  const status = (estado) => {
+    const [classes, label] = ESTADOS[estado] || ESTADOS.SOLICITADO;
+    return <span className={`${classes} rounded-full px-2.5 py-0.5 text-xs font-medium`}>{label}</span>;
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-end">
+    <div className="animate-in fade-in duration-500 space-y-6">
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mis Solicitudes</h1>
-          <p className="text-slate-500 mt-1">Gestiona tus vacaciones y permisos especiales</p>
+          <h1 className="text-2xl font-bold text-slate-900">Mis permisos</h1>
+          <p className="mt-1 text-slate-500">Solicita permisos especiales y consulta su seguimiento.</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center px-4 py-2 bg-brand-blue hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+          disabled={!types.length}
+          className="flex items-center rounded-lg bg-brand-blue px-4 py-2 font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Plus className="w-5 h-5 mr-1" /> Nueva Solicitud
+          <Plus className="mr-1 h-5 w-5" /> Nuevo permiso
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {message && <div className="rounded-lg bg-blue-50 p-4 text-sm font-medium text-blue-700">{message}</div>}
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Cargando...</div>
-        ) : requests.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center">
-            <Calendar className="w-12 h-12 text-slate-300 mb-4" />
-            <p className="text-slate-500 text-lg">No tienes solicitudes registradas.</p>
+        ) : !requests.length ? (
+          <div className="flex flex-col items-center p-12 text-center">
+            <Calendar className="mb-4 h-12 w-12 text-slate-300" />
+            <p className="text-lg text-slate-500">No tienes permisos registrados.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-600">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="px-6 py-4">Folio</th>
                   <th className="px-6 py-4">Tipo</th>
                   <th className="px-6 py-4">Fechas</th>
                   <th className="px-6 py-4">Motivo</th>
-                  <th className="px-6 py-4">Fecha Solicitud</th>
                   <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {requests.map((req) => (
-                  <tr key={req.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{req.tipo}</td>
-                    <td className="px-6 py-4">
-                      {new Date(req.fecha_inicio).toLocaleDateString()} al {new Date(req.fecha_fin).toLocaleDateString()}
+                {requests.map((request) => (
+                  <tr key={request.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium text-slate-900">{request.folio}</td>
+                    <td className="px-6 py-4">{request.tipoPermiso?.nombre || request.tipoPermiso?.codigo}</td>
+                    <td className="px-6 py-4 text-xs">
+                      {new Date(request.fechaInicio).toLocaleDateString()} — {new Date(request.fechaFin).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 truncate max-w-xs">{req.motivo}</td>
-                    <td className="px-6 py-4">{new Date(req.fecha_solicitud).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 flex items-center space-x-2">
-                      {getStatusIcon(req.estado)}
-                      {getStatusBadge(req.estado)}
+                    <td className="max-w-xs truncate px-6 py-4">{request.motivo}</td>
+                    <td className="px-6 py-4">{status(request.estado)}</td>
+                    <td className="px-6 py-4">
+                      {request.estado === 'SOLICITADO' && (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleCancel(request.id)} className="text-xs font-medium text-red-600 hover:text-red-800">
+                            Cancelar
+                          </button>
+                          <Send className="h-4 w-4 text-slate-400" aria-label="Pendiente de envío" />
+                        </div>
+                      )}
+                      {request.estado === 'EN_REVISION' && <Clock className="h-4 w-4 text-orange-500" />}
+                      {request.estado === 'APROBADO' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                      {request.estado === 'RECHAZADO' && <FileEdit className="h-4 w-4 text-red-500" />}
                     </td>
                   </tr>
                 ))}
@@ -116,75 +146,31 @@ export default function EmployeeRequests() {
         )}
       </div>
 
-      {/* Modal Nueva Solicitud */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-900">Nueva Solicitud</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
-                <XCircle className="w-6 h-6" />
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-900">Nuevo permiso</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
+                <XCircle className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Solicitud</label>
-                <select
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({...formData, tipo: e.target.value})}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-brand-blue"
-                >
-                  <option value="VACACIONES">Vacaciones</option>
-                  <option value="PERMISO">Permiso Especial</option>
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+              <label className="block text-sm font-medium text-slate-700">
+                Tipo de permiso
+                <select required value={formData.tipoPermisoId} onChange={(event) => setFormData({ ...formData, tipoPermisoId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5">
+                  {types.map((type) => <option key={type.id} value={type.id}>{type.nombre}</option>)}
                 </select>
-              </div>
+              </label>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Desde</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.fecha_inicio}
-                    onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-brand-blue"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Hasta</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.fecha_fin}
-                    onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-brand-blue"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-slate-700">Desde<input required type="date" value={formData.fechaInicio} onChange={(event) => setFormData({ ...formData, fechaInicio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
+                <label className="block text-sm font-medium text-slate-700">Hasta<input required type="date" value={formData.fechaFin} onChange={(event) => setFormData({ ...formData, fechaFin: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Motivo / Descripción</label>
-                <textarea
-                  required
-                  rows="3"
-                  value={formData.motivo}
-                  onChange={(e) => setFormData({...formData, motivo: e.target.value})}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-brand-blue"
-                  placeholder="Detalla el motivo de tu solicitud..."
-                ></textarea>
-              </div>
-              <div className="pt-4 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-brand-blue text-white font-medium rounded-lg hover:bg-blue-700"
-                >
-                  Enviar Solicitud
-                </button>
+              <label className="block text-sm font-medium text-slate-700">Motivo<textarea required rows="3" value={formData.motivo} onChange={(event) => setFormData({ ...formData, motivo: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
+              <label className="block text-sm font-medium text-slate-700">Ruta del soporte (si aplica)<input value={formData.soporteRuta} onChange={(event) => setFormData({ ...formData, soporteRuta: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">Enviar solicitud</button>
               </div>
             </form>
           </div>

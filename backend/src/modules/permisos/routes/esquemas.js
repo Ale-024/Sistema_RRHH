@@ -1,23 +1,46 @@
 const { z } = require('zod');
 
-const crearSolicitud = z
-  .object({
-    tipo: z.enum(['VACACIONES', 'PERMISO']),
-    fecha_inicio: z.coerce.date(),
-    fecha_fin: z.coerce.date(),
-    motivo: z.string().trim().min(1).max(500),
-  })
-  .refine((d) => d.fecha_fin >= d.fecha_inicio, {
+const fecha = z.coerce.date();
+
+const camposSolicitud = z.object({
+  tipoPermisoId: z.coerce.number().int().positive(),
+  fechaInicio: fecha,
+  fechaFin: fecha,
+  horaInicio: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  horaFin: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  motivo: z.string().trim().min(1).max(1000),
+  soporteRuta: z.string().trim().max(500).optional(),
+});
+
+const crearSolicitud = camposSolicitud
+  .refine((d) => d.fechaFin >= d.fechaInicio, {
     message: 'La fecha final no puede ser anterior a la inicial.',
-    path: ['fecha_fin'],
+    path: ['fechaFin'],
   });
 
+const actualizarSolicitud = camposSolicitud.partial().refine(
+  (d) => !d.fechaInicio || !d.fechaFin || d.fechaFin >= d.fechaInicio,
+  { message: 'La fecha final no puede ser anterior a la inicial.', path: ['fechaFin'] }
+);
+
 const cambiarEstado = z.object({
-  estado: z.enum(['APROBADA', 'RECHAZADA']),
+  estado: z.enum(['APROBADO', 'RECHAZADO']),
 });
 
-const idNumerico = z.object({
-  id: z.coerce.number().int().positive(),
+const motivoOpcional = z.object({ motivo: z.string().trim().max(1000).optional() });
+const motivoRequerido = z.object({ motivo: z.string().trim().min(1).max(1000) });
+
+const idNumerico = z.object({ id: z.coerce.number().int().positive() });
+const consulta = z.object({
+  estado: z.enum(['SOLICITADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO', 'CANCELADO']).optional(),
 });
 
-module.exports = { crearSolicitud, cambiarEstado, idNumerico };
+module.exports = {
+  actualizarSolicitud,
+  cambiarEstado,
+  consulta,
+  crearSolicitud,
+  idNumerico,
+  motivoOpcional,
+  motivoRequerido,
+};

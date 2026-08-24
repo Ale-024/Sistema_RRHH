@@ -30,8 +30,8 @@ model Usuario {
 }
 
 model Rol {
-  id          Int     @id @default(autoincrement())
-  codigo      String  @unique // EMPLEADO | ENCUESTADOR | RRHH_SUP | GERENTE_DEPTO | DIRECCION | ADMIN_TI
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique // EMPLEADO | ENCUESTADOR | RRHH_SUP | GERENTE_DEPTO | DIRECCION | ADMIN_TI
   nombre      String
   descripcion String?
   permisos    RolPermiso[]
@@ -39,8 +39,8 @@ model Rol {
 }
 
 model PermisoSistema {
-  id          Int    @id @default(autoincrement())
-  codigo      String @unique // empleados:leer, planilla:cerrar, auditoria:leer ...
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique // empleados:leer, planilla:cerrar, auditoria:leer ...
   descripcion String?
   roles       RolPermiso[]
 }
@@ -57,30 +57,30 @@ model RolPermiso {
 /// scopeDepartamentoId implementa el alcance ABAC que en Postgres
 /// resolvía Row Level Security (ver plan, seccion 11.3).
 model UsuarioRol {
-  usuarioId            Int
-  rolId                Int
-  scopeDepartamentoId  Int?
-  asignadoEn           DateTime @default(now())
-  usuario         Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  rol             Rol          @relation(fields: [rolId], references: [id])
-  scopeDepartamento Departamento? @relation(fields: [scopeDepartamentoId], references: [id])
+  usuarioId           Int
+  rolId               Int
+  scopeDepartamentoId Int?
+  asignadoEn          DateTime      @default(now())
+  usuario             Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol                 Rol           @relation(fields: [rolId], references: [id])
+  scopeDepartamento   Departamento? @relation(fields: [scopeDepartamentoId], references: [id])
 
   @@id([usuarioId, rolId])
 }
 
 /// Refresh tokens rotativos con deteccion de reuso.
 model SesionRefresh {
-  id          String    @id @default(uuid())
-  usuarioId   Int
-  tokenHash   String    @unique
-  familiaId   String
-  expiraEn    DateTime
-  revocadoEn  DateTime?
+  id           String    @id @default(uuid())
+  usuarioId    Int
+  tokenHash    String    @unique
+  familiaId    String
+  expiraEn     DateTime
+  revocadoEn   DateTime?
   motivoRevoca String?
-  ip          String?
-  userAgent   String?
-  creadoEn    DateTime  @default(now())
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ip           String?
+  userAgent    String?
+  creadoEn     DateTime  @default(now())
+  usuario      Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId, revocadoEn])
   @@index([familiaId])
@@ -89,7 +89,7 @@ model SesionRefresh {
 // ═══════════════════════ ORGANIZACIÓN ═══════════════════════
 
 model Departamento {
-  id          Int       @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   nombre      String
   descripcion String?
   puestos     Puesto[]
@@ -132,15 +132,16 @@ model Empleado {
   estadoLaboral       String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | VACACIONES | INACTIVO
   causaSalida         String?
 
-  asistencias    RegistroAsistencia[]
-  marcajes       Marcaje[]
-  horarios       HorarioEmpleado[]
-  solicitudes    Solicitud[]
-  nominas        Nomina[]
-  notificaciones Notificacion[]
-  contratos      Contrato[]
-  historial      HistorialLaboral[]
-  documentos     DocumentoEmpleado[]
+  asistencias        RegistroAsistencia[]
+  marcajes           Marcaje[]
+  horarios           HorarioEmpleado[]
+  solicitudes        Solicitud[]
+  solicitudesPermiso SolicitudPermiso[]
+  nominas            Nomina[]
+  notificaciones     Notificacion[]
+  contratos          Contrato[]
+  historial          HistorialLaboral[]
+  documentos         DocumentoEmpleado[]
 
   @@index([estadoLaboral])
 }
@@ -172,7 +173,7 @@ model HistorialLaboral {
   motivo        String?
   autorizadoPor Int?
   registradoEn  DateTime @default(now())
-  empleado Empleado @relation(fields: [empleado_id], references: [id])
+  empleado      Empleado @relation(fields: [empleado_id], references: [id])
 
   @@index([empleado_id, registradoEn])
 }
@@ -187,7 +188,7 @@ model DocumentoEmpleado {
   tamanoBytes Int
   subidoPor   Int
   subidoEn    DateTime @default(now())
-  empleado Empleado @relation(fields: [empleado_id], references: [id])
+  empleado    Empleado @relation(fields: [empleado_id], references: [id])
 
   @@index([empleado_id, tipo])
 }
@@ -196,15 +197,15 @@ model DocumentoEmpleado {
 
 /// Turno configurable: planta, campo o call center.
 model Turno {
-  id               Int     @id @default(autoincrement())
-  nombre           String
-  horaEntrada      String // "08:00" en hora local
-  horaSalida       String // "17:00"
-  cruzaMedianoche  Boolean @default(false)
-  toleranciaMin    Int     @default(10)
-  minutosAlmuerzo  Int     @default(60)
-  diasSemana       String  @default("1,2,3,4,5") // ISO: 1=lunes
-  activo           Boolean @default(true)
+  id              Int     @id @default(autoincrement())
+  nombre          String
+  horaEntrada     String // "08:00" en hora local
+  horaSalida      String // "17:00"
+  cruzaMedianoche Boolean @default(false)
+  toleranciaMin   Int     @default(10)
+  minutosAlmuerzo Int     @default(60)
+  diasSemana      String  @default("1,2,3,4,5") // ISO: 1=lunes
+  activo          Boolean @default(true)
 
   horarios    HorarioEmpleado[]
   asistencias RegistroAsistencia[]
@@ -245,23 +246,25 @@ model Marcaje {
 
 /// Consolidado diario derivado del marcaje; un registro por empleado y fecha.
 model RegistroAsistencia {
-  id                   Int       @id @default(autoincrement())
-  empleadoId           Int
-  empleado             Empleado  @relation(fields: [empleadoId], references: [id])
-  fecha                DateTime /// medianoche local del dia consolidado
-  turnoId              Int?
-  turno                Turno?    @relation(fields: [turnoId], references: [id])
-  horaEntrada          DateTime?
-  horaSalida           DateTime?
-  minutosTrabajados    Int       @default(0)
-  minutosTardanza      Int       @default(0)
-  horasExtraDiurnas    Float     @default(0)
-  horasExtraNocturnas  Float     @default(0)
-  estadoDia            String // PRESENTE | AUSENTE | TARDANZA | PERMISO | VACACION | INCAPACIDAD | DESCANSO | FERIADO
-  observacion          String?
-  cerrado              Boolean   @default(false)
-  cerradoPor           Int?
-  cerradoEn            DateTime?
+  id                  Int               @id @default(autoincrement())
+  empleadoId          Int
+  empleado            Empleado          @relation(fields: [empleadoId], references: [id])
+  fecha               DateTime /// medianoche local del dia consolidado
+  turnoId             Int?
+  turno               Turno?            @relation(fields: [turnoId], references: [id])
+  horaEntrada         DateTime?
+  horaSalida          DateTime?
+  minutosTrabajados   Int               @default(0)
+  minutosTardanza     Int               @default(0)
+  horasExtraDiurnas   Float             @default(0)
+  horasExtraNocturnas Float             @default(0)
+  estadoDia           String // PRESENTE | AUSENTE | TARDANZA | PERMISO | VACACION | INCAPACIDAD | DESCANSO | FERIADO
+  permisoId           Int?
+  permiso             SolicitudPermiso? @relation(fields: [permisoId], references: [id], onDelete: SetNull)
+  observacion         String?
+  cerrado             Boolean           @default(false)
+  cerradoPor          Int?
+  cerradoEn           DateTime?
 
   @@unique([empleadoId, fecha])
   @@index([fecha, estadoDia])
@@ -290,6 +293,70 @@ model Solicitud {
   estado          String   @default("PENDIENTE") // "PENDIENTE" | "APROBADA" | "RECHAZADA"
 
   @@index([empleado_id, estado])
+}
+
+// ════════════════════════ PERMISOS (CU03) ════════════════════════
+
+/// Catalogo legal de permisos especiales. Se administra por seed/migracion,
+/// no se codifican topes ni bases legales en las rutas.
+model TipoPermiso {
+  id              Int     @id @default(autoincrement())
+  codigo          String  @unique // PERS | ENF | LUTO | MAT | PAT | ESTU
+  nombre          String
+  remunerado      Boolean @default(true)
+  diasMaxAnio     Int?
+  requiereSoporte Boolean @default(false)
+  baseLegal       String?
+  activo          Boolean @default(true)
+
+  solicitudes SolicitudPermiso[]
+}
+
+/// Solicitud independiente de vacaciones. El modelo Solicitud anterior se
+/// conserva temporalmente para no romper instalaciones que aun lo contengan.
+model SolicitudPermiso {
+  id                  Int       @id @default(autoincrement())
+  folio               String    @unique
+  empleadoId          Int
+  tipoPermisoId       Int
+  fechaInicio         DateTime
+  fechaFin            DateTime
+  horaInicio          String?
+  horaFin             String?
+  diasHabiles         Float
+  motivo              String
+  soporteRuta         String?
+  estado              String    @default("SOLICITADO") // SOLICITADO | EN_REVISION | APROBADO | RECHAZADO | CANCELADO
+  revisadoPor         Int?
+  revisadoEn          DateTime?
+  observacionRevision String?
+  creadoEn            DateTime  @default(now())
+  actualizadoEn       DateTime  @updatedAt
+
+  empleado    Empleado                 @relation(fields: [empleadoId], references: [id], onDelete: Restrict)
+  tipoPermiso TipoPermiso              @relation(fields: [tipoPermisoId], references: [id], onDelete: Restrict)
+  historial   PermisoHistorialEstado[]
+  asistencias RegistroAsistencia[]
+
+  @@index([empleadoId, estado])
+  @@index([estado, creadoEn])
+  @@index([fechaInicio, fechaFin])
+}
+
+/// Historial append-only de la máquina de estados.
+model PermisoHistorialEstado {
+  id             Int      @id @default(autoincrement())
+  permisoId      Int
+  estadoAnterior String?
+  estadoNuevo    String
+  usuarioId      Int
+  motivo         String?
+  ip             String?
+  ocurridoEn     DateTime @default(now())
+
+  permiso SolicitudPermiso @relation(fields: [permisoId], references: [id], onDelete: Restrict)
+
+  @@index([permisoId, ocurridoEn])
 }
 
 // ═════════════════════════ PLANILLA ═════════════════════════

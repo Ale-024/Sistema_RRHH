@@ -1,4 +1,4 @@
-export const ROLES_ADMINISTRATIVOS = ['ADMIN_TI', 'RRHH_SUP', 'DIRECCION'];
+export const ROLES_ADMINISTRATIVOS = ['ADMIN_TI', 'RRHH_SUP', 'DIRECCION', 'GERENTE_DEPTO'];
 
 export const ETIQUETAS_ROL = {
   ADMIN_TI: 'Administrador de TI',

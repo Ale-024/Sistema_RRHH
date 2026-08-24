@@ -35,7 +35,7 @@ async function consolidarDia(fechaObjetivo, ctx) {
 
   const diaSemanaISO = inicio.getDay() === 0 ? 7 : inicio.getDay(); // ISO: lunes=1
 
-  const [empleadosActivos, horarios, feriado, marcajesDelDia, solicitudesAprobadas] =
+  const [empleadosActivos, horarios, feriado, marcajesDelDia, permisosAprobados, solicitudesLegadas] =
     await Promise.all([
       prisma.empleado.findMany({ where: { estadoLaboral: 'ACTIVO' }, select: { id: true } }),
       prisma.horarioEmpleado.findMany({
@@ -48,6 +48,11 @@ async function consolidarDia(fechaObjetivo, ctx) {
         where: { ocurridoEn: { gte: inicio, lt: fin } },
         orderBy: [{ empleadoId: 'asc' }, { ocurridoEn: 'asc' }],
       }),
+      prisma.solicitudPermiso.findMany({
+        where: { estado: 'APROBADO', fechaInicio: { lt: fin }, fechaFin: { gte: inicio } },
+        select: { id: true, empleadoId: true, tipoPermiso: { select: { codigo: true } } },
+      }),
+      // Compatibilidad de lectura durante la migracion gradual del MVP.
       prisma.solicitud.findMany({
         where: { estado: 'APROBADA', fecha_inicio: { lt: fin }, fecha_fin: { gte: inicio } },
         select: { empleado_id: true, tipo: true },
@@ -62,9 +67,10 @@ async function consolidarDia(fechaObjetivo, ctx) {
     horariosPorEmpleado.get(h.empleadoId).push(h);
   }
 
-  const permisoPorEmpleado = new Map(
-    solicitudesAprobadas.map((s) => [s.empleado_id, s.tipo])
-  );
+  const permisoPorEmpleado = new Map([
+    ...permisosAprobados.map((s) => [s.empleadoId, { id: s.id, codigo: s.tipoPermiso.codigo }]),
+    ...solicitudesLegadas.map((s) => [s.empleado_id, { id: null, codigo: s.tipo }]),
+  ]);
 
   let procesados = 0;
   for (const empleado of empleadosActivos) {
@@ -124,6 +130,7 @@ async function consolidarDia(fechaObjetivo, ctx) {
       }
 
       if (feriado?.remunerado) estadoDia = 'FERIADO';
+      else if (permisoPorEmpleado.get(empleado.id)?.codigo === 'VACACIONES') estadoDia = 'VACACION';
       else if (permisoPorEmpleado.get(empleado.id)) estadoDia = 'PERMISO';
       else estadoDia = minutosTardanza > 0 ? 'TARDANZA' : 'PRESENTE';
     } else if (entrada && !salida) {
@@ -131,7 +138,7 @@ async function consolidarDia(fechaObjetivo, ctx) {
       estadoDia = 'PRESENTE';
     } else if (feriado) {
       estadoDia = 'FERIADO';
-    } else if (permisoPorEmpleado.get(empleado.id) === 'VACACIONES') {
+    } else if (permisoPorEmpleado.get(empleado.id)?.codigo === 'VACACIONES') {
       estadoDia = 'VACACION';
     } else if (permisoPorEmpleado.get(empleado.id)) {
       estadoDia = 'PERMISO';
@@ -151,6 +158,7 @@ async function consolidarDia(fechaObjetivo, ctx) {
         horasExtraDiurnas,
         horasExtraNocturnas,
         estadoDia,
+        permisoId: permisoPorEmpleado.get(empleado.id)?.id ?? null,
       },
       create: {
         empleadoId: empleado.id,
@@ -163,6 +171,7 @@ async function consolidarDia(fechaObjetivo, ctx) {
         horasExtraDiurnas,
         horasExtraNocturnas,
         estadoDia,
+        permisoId: permisoPorEmpleado.get(empleado.id)?.id ?? null,
       },
     });
     procesados++;

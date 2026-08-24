@@ -46,6 +46,21 @@ function registrarSuscriptores(bus, prisma) {
   bus.suscribir('SesionIniciada', () => {}); // el login ya audita directamente
   bus.suscribir('MarcajeRegistrado', auditar('Asistencia', 'MARCAR'));
   bus.suscribir('SolicitudCreada', auditar('Solicitud', 'CREAR'));
+  const auditarPermiso = (accion) => async (evento) => {
+    await registrar(prisma, {
+      usuarioId: evento.usuarioId ?? null,
+      entidad: 'SolicitudPermiso',
+      entidadId: evento.permisoId,
+      accion,
+      despues: { ...evento },
+    });
+  };
+  bus.suscribir('PermisoSolicitado', auditarPermiso('CREAR'));
+  bus.suscribir('PermisoEnviadoRevision', auditarPermiso('ENVIAR_REVISION'));
+  bus.suscribir('PermisoAprobado', auditarPermiso('APROBAR'));
+  bus.suscribir('PermisoRechazado', auditarPermiso('RECHAZAR'));
+  bus.suscribir('PermisoCorreccionSolicitada', auditarPermiso('SOLICITAR_CORRECCION'));
+  bus.suscribir('PermisoCancelado', auditarPermiso('CANCELAR'));
 }
 
 module.exports = { registrar, registrarSuscriptores };
