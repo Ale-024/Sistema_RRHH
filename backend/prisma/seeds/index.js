@@ -132,8 +132,10 @@ async function sembrarAdmin() {
         },
       },
       roles: {
+        // INV5 (Anexo sec. 4): solo GERENTE_DEPTO lleva scope; RRHH_SUP es global.
+        // Actor SISTEMA (asignadoPorId null) queda exento de INV3 en el arranque.
         create: [
-          { rolId: rrhhRol.id, scopeDepartamentoId: depto.id },
+          { rolId: rrhhRol.id },
         ],
       },
     },
