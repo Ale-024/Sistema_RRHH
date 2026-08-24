@@ -11,9 +11,6 @@ export default function AdminUsuarios() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [asignacion, setAsignacion] = useState({});
 
-  useEffect(() => {
-    cargar();
-  }, []);
 
   const cargar = async () => {
     try {
@@ -32,6 +29,13 @@ export default function AdminUsuarios() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargar();
+  }, []);
 
   const notificar = (type, text) => {
     setMessage({ type, text });

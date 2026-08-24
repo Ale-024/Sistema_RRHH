@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, Plus, Search, UserCheck, UserX, Edit, XCircle } from 'lucide-react';
+import { Plus, Search, UserCheck, UserX, Edit, XCircle } from 'lucide-react';
 
 export default function AdminEmployees() {
   const [employees, setEmployees] = useState([]);
@@ -8,7 +8,6 @@ export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
   const [formData, setFormData] = useState({
     email: '', password: '', nombres: '', apellidos: '',
@@ -18,11 +17,6 @@ export default function AdminEmployees() {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchEmployees();
-    fetchDepartments();
-    fetchPositions();
-  }, []);
 
   const fetchEmployees = async () => {
     try {
@@ -35,19 +29,22 @@ export default function AdminEmployees() {
     }
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const res = await api.get('/admin/departments');
-      setDepartments(res.data);
-    } catch (error) { console.error(error); }
-  };
-
   const fetchPositions = async () => {
     try {
       const res = await api.get('/admin/positions');
       setPositions(res.data);
     } catch (error) { console.error(error); }
   };
+
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    // Falso positivo: el estado se actualiza tras el await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchEmployees();
+        fetchPositions();
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -112,6 +109,8 @@ export default function AdminEmployees() {
       resetForm();
       fetchEmployees();
     } catch (error) {
+      // eslint-disable-next-line no-unused-vars -- se usa en la rama de detalle
+      void error;
       setMessage({ type: 'error', text: error.response?.data?.message || 'Error al guardar' });
     }
   };
@@ -121,7 +120,7 @@ export default function AdminEmployees() {
     try {
       await api.put(`/admin/employees/${emp.id}`, { activo: !esActivo });
       fetchEmployees();
-    } catch (error) {
+    } catch {
       alert('Error al cambiar estado');
     }
   };

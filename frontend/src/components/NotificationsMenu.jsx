@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Mail, MailOpen, X } from 'lucide-react';
+import { Bell, Mail, MailOpen, X } from 'lucide-react';
 import api from '../services/api';
 
 export default function NotificationsMenu() {
@@ -8,7 +8,20 @@ export default function NotificationsMenu() {
   const [selectedNotif, setSelectedNotif] = useState(null);
   const dropdownRef = useRef(null);
 
+
+  async function fetchNotifications() {
+    try {
+      const res = await api.get('/employee/notifications');
+      setNotifications(res.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  }
+
   useEffect(() => {
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -19,20 +32,13 @@ export default function NotificationsMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await api.get('/employee/notifications');
-      setNotifications(res.data);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
-
   const markAsRead = async (id) => {
     try {
       await api.put(`/employee/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
-    } catch (error) {}
+    } catch {
+      // El error de marcado individual no bloquea la interfaz.
+    }
   };
 
   const markAllAsRead = async () => {
@@ -40,7 +46,9 @@ export default function NotificationsMenu() {
       const unread = notifications.filter(n => !n.leida);
       await Promise.all(unread.map(n => api.put(`/employee/notifications/${n.id}/read`)));
       setNotifications(prev => prev.map(n => ({ ...n, leida: true })));
-    } catch (error) {}
+    } catch {
+      // Reintento posible desde el boton; no se interrumpe la UI.
+    }
   };
 
   const openNotification = (notif) => {

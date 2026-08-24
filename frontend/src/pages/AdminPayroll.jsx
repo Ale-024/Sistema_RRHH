@@ -13,10 +13,6 @@ export default function AdminPayroll() {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchPayrolls();
-    fetchEmployees();
-  }, []);
 
   const fetchPayrolls = async () => {
     try {
@@ -35,6 +31,16 @@ export default function AdminPayroll() {
       setEmployees(res.data.filter(e => e.usuario?.activo));
     } catch (error) { console.error(error); }
   };
+
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    // Falso positivo: el estado se actualiza tras el await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPayrolls();
+    fetchEmployees();
+  }, []);
 
   const resetForm = () => {
     setFormData({ empleado_id: '', periodo: '', salario_bruto: '', deducciones: '', fecha_pago: '' });
@@ -84,7 +90,7 @@ export default function AdminPayroll() {
       await api.delete(`/admin/payroll/${id}`);
       fetchPayrolls();
       setMessage({ type: 'success', text: 'Registro eliminado' });
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error al eliminar' });
     }
   };

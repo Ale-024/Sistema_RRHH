@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/useAuthStore';
+import { useState } from 'react';
 import { User, Phone, MapPin, AlertCircle, Save, Loader2, Key, Lock } from 'lucide-react';
 import api from '../services/api';
 
 export default function EmployeeProfile() {
-  const { user } = useAuthStore();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,9 +18,6 @@ export default function EmployeeProfile() {
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   const [changingPassword, setChangingPassword] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
 
   const fetchProfile = async () => {
     try {
@@ -42,6 +37,13 @@ export default function EmployeeProfile() {
     }
   };
 
+  useEffect(() => {
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProfile();
+  }, []);
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -49,7 +51,7 @@ export default function EmployeeProfile() {
     try {
       await api.put('/employee/profile', formData);
       setMessage({ type: 'success', text: 'Perfil actualizado exitosamente' });
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error al guardar los cambios' });
     } finally {
       setSaving(false);

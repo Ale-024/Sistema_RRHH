@@ -1,19 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
-export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+function aplicarTemaInicial() {
+  const oscuro =
+    localStorage.theme === 'dark' ||
+    (!('theme' in localStorage) &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', oscuro);
+  return oscuro;
+}
 
-  useEffect(() => {
-    // Check initial preference
-    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+export default function ThemeToggle() {
+  const [isDark, setIsDark] = useState(aplicarTemaInicial);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -28,7 +26,7 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button 
+    <button
       onClick={toggleTheme}
       className="p-2 text-slate-400 dark:text-slate-500 hover:text-brand-blue dark:hover:text-blue-400 transition-colors rounded-full"
       title={isDark ? 'Modo Claro' : 'Modo Oscuro'}

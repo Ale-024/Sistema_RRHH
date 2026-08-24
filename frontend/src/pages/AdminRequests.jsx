@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function AdminRequests() {
   const [requests, setRequests] = useState([]);
@@ -8,9 +8,6 @@ export default function AdminRequests() {
   const [filter, setFilter] = useState('TODOS');
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
 
   const fetchRequests = async () => {
     try {
@@ -23,12 +20,19 @@ export default function AdminRequests() {
     }
   };
 
+  useEffect(() => {
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRequests();
+  }, []);
+
   const handleUpdateStatus = async (id, estado) => {
     try {
       await api.put(`/admin/requests/${id}/status`, { estado });
       setMessage({ type: 'success', text: `Solicitud ${estado.toLowerCase()} exitosamente` });
       fetchRequests();
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error al actualizar solicitud' });
     }
   };

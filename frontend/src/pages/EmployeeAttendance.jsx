@@ -37,8 +37,12 @@ export default function EmployeeAttendance() {
   };
 
   useEffect(() => {
+    // La carga inicial actualiza estado solo despues del await; el aviso
+    // react(set-state-in-effect) es un falso positivo en este patron.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
   }, []);
+
 
   const marcar = async () => {
     setMarcando(true);
@@ -46,7 +50,7 @@ export default function EmployeeAttendance() {
     try {
       let cuerpo = { dispositivo: 'web' };
       if (usarGps && navigator.geolocation) {
-        cuerpo = await new Promise((resolve, reject) => {
+        cuerpo = await new Promise((resolve, _reject) => {
           navigator.geolocation.getCurrentPosition(
             (pos) =>
               resolve({

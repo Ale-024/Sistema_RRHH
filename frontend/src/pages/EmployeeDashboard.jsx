@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { CalendarClock, CheckCircle, Clock } from 'lucide-react';
 import api from '../services/api';
 
 export default function EmployeeDashboard() {
   const { user } = useAuthStore();
-  const [attendanceStatus, setAttendanceStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const markAttendance = async () => {
