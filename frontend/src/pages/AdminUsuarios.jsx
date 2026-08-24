@@ -1,29 +1,53 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Shield, UserCog } from 'lucide-react';
+import { Shield, UserCog, CheckCircle2, XCircle } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { tieneAlgunPermiso, tienePermiso } from '../shared/roles';
 
 const ESTADOS = ['ACTIVO', 'INACTIVO', 'BLOQUEADO'];
+const ETIQUETAS_AUTORIZACION = {
+  SOLICITADA: 'Solicitada',
+  AUTORIZADA: 'Autorizada',
+  RECHAZADA: 'Rechazada',
+  CONSUMIDA: 'Ejecutada',
+};
 
 export default function AdminUsuarios() {
+  const { user } = useAuthStore();
   const [usuarios, setUsuarios] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [autorizaciones, setAutorizaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [asignacion, setAsignacion] = useState({});
+  const [procesando, setProcesando] = useState('');
 
+  // ADMIN_TI gestiona cuentas; DIRECCION (planilla:cerrar) participa en el
+  // ciclo de autorizacion de roles elevados.
+  const puedeGestionar = tienePermiso(user, 'usuarios:administrar');
+  const puedeDecidir = tienePermiso(user, 'planilla:cerrar');
+  const participa = tieneAlgunPermiso(user, ['usuarios:administrar', 'planilla:cerrar']);
 
   const cargar = async () => {
+    setLoading(true);
     try {
-      const [resUsuarios, resRoles] = await Promise.all([
-        api.get('/admin/usuarios'),
-        api.get('/admin/roles'),
-      ]);
-      setUsuarios(resUsuarios.data);
-      setRoles(resRoles.data);
+      const peticiones = [];
+      if (puedeGestionar) {
+        peticiones.push(
+          api.get('/admin/usuarios').then((r) => setUsuarios(r.data)),
+          api.get('/admin/roles').then((r) => setRoles(r.data))
+        );
+      }
+      if (participa) {
+        peticiones.push(
+          api.get('/admin/autorizaciones-rol').then((r) => setAutorizaciones(r.data?.data ?? r.data))
+        );
+      }
+      await Promise.all(peticiones);
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Error al cargar usuarios y roles.',
+        text: error.response?.data?.message || 'Error al cargar la información.',
       });
     } finally {
       setLoading(false);
@@ -35,6 +59,7 @@ export default function AdminUsuarios() {
     // react(set-state-in-effect) es un falso positivo en este patron.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const notificar = (type, text) => {
@@ -78,6 +103,23 @@ export default function AdminUsuarios() {
     }
   };
 
+  const decidir = async (id, decision) => {
+    const motivo = decision === 'RECHAZADA'
+      ? window.prompt('Motivo del rechazo:')
+      : window.prompt('Observación (opcional):');
+    if (decision === 'RECHAZADA' && !motivo) return;
+    setProcesando(`${id}:${decision}`);
+    try {
+      await api.post(`/admin/autorizaciones-rol/${id}/decision`, { decision, ...(motivo ? { motivo } : {}) });
+      notificar('success', `Solicitud ${decision.toLowerCase()}.`);
+      cargar();
+    } catch (error) {
+      notificar('error', error.response?.data?.detail || error.response?.data?.message || 'No se pudo registrar la decisión.');
+    } finally {
+      setProcesando('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -85,7 +127,7 @@ export default function AdminUsuarios() {
           <Shield className="w-6 h-6 text-blue-600" /> Usuarios y roles
         </h1>
         <p className="text-slate-500 mt-1">
-          Administra cuentas de acceso y sus permisos según el catálogo de roles.
+          Cuentas de acceso, permisos por catálogo y autorizaciones de roles elevados.
         </p>
       </div>
 
@@ -95,100 +137,171 @@ export default function AdminUsuarios() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Cargando...</div>
-        ) : (
+      {/* ── Autorizaciones de rol elevado (anexo de autoridad) ── */}
+      {participa && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-800">Autorizaciones de rol elevado</h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {puedeDecidir
+                ? 'Como Dirección General puedes autorizar o rechazar solicitudes pendientes.'
+                : 'Las solicitudes deben ser autorizadas por Dirección General antes de ejecutarse.'}
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-slate-600">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Usuario</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Roles</th>
-                  <th className="px-6 py-4 w-72">Asignar rol</th>
+                  <th className="px-6 py-3">Beneficiario</th>
+                  <th className="px-6 py-3">Rol solicitado</th>
+                  <th className="px-6 py-3">Alcance</th>
+                  <th className="px-6 py-3">Estado</th>
+                  <th className="px-6 py-3">Vence</th>
+                  <th className="px-6 py-3 text-right">Decisión</th>
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-900 flex items-center gap-1.5">
-                        <UserCog className="w-4 h-4 text-slate-400" />
-                        {u.email}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {u.empleado ? `${u.empleado.nombres} ${u.empleado.apellidos}` : 'Sin expediente'}
-                        {' · último acceso: '}
-                        {u.ultimoAcceso ? new Date(u.ultimoAcceso).toLocaleString('es-HN') : 'nunca'}
-                      </div>
+                {autorizaciones.map((a) => (
+                  <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-3 font-medium text-slate-900">{a.beneficiario?.email || `Usuario ${a.beneficiarioId}`}</td>
+                    <td className="px-6 py-3">{a.rol?.nombre || a.rolId}</td>
+                    <td className="px-6 py-3 text-xs">{a.departamento ? a.departamento.nombre : 'Global'}</td>
+                    <td className="px-6 py-3">
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        {ETIQUETAS_AUTORIZACION[a.estado] || a.estado}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <select
-                        value={u.estado}
-                        onChange={(e) => cambiarEstado(u.id, e.target.value)}
-                        className={`p-1.5 rounded-lg border text-xs font-medium ${
-                          u.estado === 'ACTIVO'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : 'bg-red-50 text-red-700 border-red-200'
-                        }`}
-                      >
-                        {ESTADOS.map((e) => (
-                          <option key={e} value={e}>{e}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 space-y-1">
-                      {u.roles.length === 0 && (
-                        <span className="text-slate-400 text-xs">Sin roles</span>
-                      )}
-                      {u.roles.map((r) => (
-                        <span
-                          key={r.rol.codigo}
-                          className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full mr-1"
-                        >
-                          {r.rol.nombre}
+                    <td className="px-6 py-3 text-xs">{a.venceEn ? new Date(a.venceEn).toLocaleString('es-HN') : '—'}</td>
+                    <td className="px-6 py-3 text-right">
+                      {a.estado === 'SOLICITADA' && puedeDecidir ? (
+                        <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => quitarRol(u.id, r.rol.codigo)}
-                            className="text-slate-400 hover:text-red-600"
-                            title="Retirar rol"
+                            onClick={() => decidir(a.id, 'AUTORIZADA')}
+                            disabled={Boolean(procesando)}
+                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
                           >
-                            ×
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Autorizar
                           </button>
-                          {r.scopeDepartamentoId && (
-                            <span className="text-[10px] text-slate-400">(depto. {r.scopeDepartamentoId})</span>
-                          )}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <select
-                          value={asignacion[u.id] || ''}
-                          onChange={(e) => setAsignacion((a) => ({ ...a, [u.id]: e.target.value }))}
-                          className="p-1.5 border border-slate-300 rounded-lg text-xs flex-1"
-                        >
-                          <option value="">Seleccionar rol...</option>
-                          {roles.map((r) => (
-                            <option key={r.id} value={r.codigo}>{r.nombre}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => asignarRol(u.id)}
-                          disabled={!asignacion[u.id]}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg"
-                        >
-                          Asignar
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => decidir(a.id, 'RECHAZADA')}
+                            disabled={Boolean(procesando)}
+                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
+                {!autorizaciones.length && (
+                  <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400">No hay autorizaciones registradas.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ── Gestión de cuentas (solo usuarios:administrar) ── */}
+      {puedeGestionar && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-slate-500">Cargando...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-slate-600">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-4">Usuario</th>
+                    <th className="px-6 py-4">Estado</th>
+                    <th className="px-6 py-4">Roles</th>
+                    <th className="px-6 py-4 w-72">Asignar rol base</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuarios.map((u) => (
+                    <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-900 flex items-center gap-1.5">
+                          <UserCog className="w-4 h-4 text-slate-400" />
+                          {u.email}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {u.empleado ? `${u.empleado.nombres} ${u.empleado.apellidos}` : 'Sin expediente'}
+                          {' · último acceso: '}
+                          {u.ultimoAcceso ? new Date(u.ultimoAcceso).toLocaleString('es-HN') : 'nunca'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={u.estado}
+                          onChange={(e) => cambiarEstado(u.id, e.target.value)}
+                          className={`p-1.5 rounded-lg border text-xs font-medium ${
+                            u.estado === 'ACTIVO'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`}
+                        >
+                          {ESTADOS.map((e) => (
+                            <option key={e} value={e}>{e}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 space-y-1">
+                        {u.roles.length === 0 && (
+                          <span className="text-slate-400 text-xs">Sin roles</span>
+                        )}
+                        {u.roles.map((r) => (
+                          <span
+                            key={r.rol.codigo}
+                            className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full mr-1"
+                          >
+                            {r.rol.nombre}
+                            <button
+                              onClick={() => quitarRol(u.id, r.rol.codigo)}
+                              className="text-slate-400 hover:text-red-600"
+                              title="Retirar rol"
+                            >
+                              ×
+                            </button>
+                            {r.scopeDepartamentoId && (
+                              <span className="text-[10px] text-slate-400">(depto. {r.scopeDepartamentoId})</span>
+                            )}
+                          </span>
+                        ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <select
+                            value={asignacion[u.id] || ''}
+                            onChange={(e) => setAsignacion((a) => ({ ...a, [u.id]: e.target.value }))}
+                            className="p-1.5 border border-slate-300 rounded-lg text-xs flex-1"
+                          >
+                            <option value="">Seleccionar rol...</option>
+                            {roles.map((r) => (
+                              <option key={r.id} value={r.codigo}>{r.nombre}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => asignarRol(u.id)}
+                            disabled={!asignacion[u.id]}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg"
+                          >
+                            Asignar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import { Calendar, CheckCircle2, Clock, FileEdit, Plus, Send, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, FileEdit, Plus, XCircle } from 'lucide-react';
 
 const ESTADOS = {
   SOLICITADO: ['bg-slate-100 text-slate-700', 'Solicitado'],
@@ -10,7 +10,15 @@ const ESTADOS = {
   CANCELADO: ['bg-slate-100 text-slate-500', 'Cancelado'],
 };
 
-const inicial = { tipoPermisoId: '', fechaInicio: '', fechaFin: '', motivo: '', soporteRuta: '' };
+const inicial = { id: null, tipoPermisoId: '', fechaInicio: '', fechaFin: '', motivo: '', soporteRuta: '' };
+
+const getReturnReason = (request) => {
+  if (request.estado !== 'SOLICITADO' || !request.historial) return null;
+  const devuelto = [...request.historial].reverse().find(
+    (h) => h.estadoAnterior === 'EN_REVISION' && h.estadoNuevo === 'SOLICITADO'
+  );
+  return devuelto?.motivo || null;
+};
 
 export default function EmployeeRequests() {
   const [requests, setRequests] = useState([]);
@@ -47,18 +55,48 @@ export default function EmployeeRequests() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const created = await api.post('/employee/requests', {
+      const payload = {
         ...formData,
         tipoPermisoId: Number(formData.tipoPermisoId),
-      });
-      await api.post(`/employee/requests/${created.data.data.id}/enviar`, {});
-      setShowModal(false);
-      setFormData({ ...inicial, tipoPermisoId: formData.tipoPermisoId });
-      setMessage('Solicitud enviada a revisión.');
+      };
+      if (formData.id) {
+        await api.put(`/employee/requests/${formData.id}`, payload);
+        setShowModal(false);
+        setFormData({ ...inicial, tipoPermisoId: formData.tipoPermisoId });
+        setMessage('Solicitud actualizada correctamente.');
+      } else {
+        const created = await api.post('/employee/requests', payload);
+        await api.post(`/employee/requests/${created.data.data.id}/enviar`, {});
+        setShowModal(false);
+        setFormData({ ...inicial, tipoPermisoId: formData.tipoPermisoId });
+        setMessage('Solicitud enviada a revisión.');
+      }
       fetchData();
     } catch (error) {
-      setMessage(error.response?.data?.detail || 'No fue posible enviar la solicitud.');
+      setMessage(error.response?.data?.detail || 'No fue posible guardar la solicitud.');
     }
+  };
+
+  const handleSend = async (id) => {
+    try {
+      await api.post(`/employee/requests/${id}/enviar`, {});
+      setMessage('Solicitud reenviada a revisión.');
+      fetchData();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'No fue posible reenviar la solicitud.');
+    }
+  };
+
+  const openEditModal = (request) => {
+    setFormData({
+      id: request.id,
+      tipoPermisoId: String(request.tipoPermisoId),
+      fechaInicio: request.fechaInicio.slice(0, 10),
+      fechaFin: request.fechaFin.slice(0, 10),
+      motivo: request.motivo,
+      soporteRuta: request.soporteRuta || '',
+    });
+    setShowModal(true);
   };
 
   const handleCancel = async (id) => {
@@ -123,15 +161,27 @@ export default function EmployeeRequests() {
                     <td className="px-6 py-4 text-xs">
                       {new Date(request.fechaInicio).toLocaleDateString()} — {new Date(request.fechaFin).toLocaleDateString()}
                     </td>
-                    <td className="max-w-xs truncate px-6 py-4">{request.motivo}</td>
+                    <td className="max-w-xs px-6 py-4">
+                      <div className="truncate">{request.motivo}</div>
+                      {getReturnReason(request) && (
+                        <div className="mt-1 text-xs font-medium text-orange-600">Devuelto: {getReturnReason(request)}</div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">{status(request.estado)}</td>
                     <td className="px-6 py-4">
                       {request.estado === 'SOLICITADO' && (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleCancel(request.id)} className="text-xs font-medium text-red-600 hover:text-red-800">
-                            Cancelar
-                          </button>
-                          <Send className="h-4 w-4 text-slate-400" aria-label="Pendiente de envío" />
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap gap-2">
+                            <button onClick={() => handleSend(request.id)} className="text-xs font-medium text-green-600 hover:text-green-800">
+                              Reenviar
+                            </button>
+                            <button onClick={() => openEditModal(request)} className="text-xs font-medium text-blue-600 hover:text-blue-800">
+                              Editar
+                            </button>
+                            <button onClick={() => handleCancel(request.id)} className="text-xs font-medium text-red-600 hover:text-red-800">
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       )}
                       {request.estado === 'EN_REVISION' && <Clock className="h-4 w-4 text-orange-500" />}
@@ -150,7 +200,7 @@ export default function EmployeeRequests() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h3 className="text-lg font-bold text-slate-900">Nuevo permiso</h3>
+              <h3 className="text-lg font-bold text-slate-900">{formData.id ? 'Editar permiso' : 'Nuevo permiso'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <XCircle className="h-6 w-6" />
               </button>
@@ -170,7 +220,7 @@ export default function EmployeeRequests() {
               <label className="block text-sm font-medium text-slate-700">Ruta del soporte (si aplica)<input value={formData.soporteRuta} onChange={(event) => setFormData({ ...formData, soporteRuta: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">Enviar solicitud</button>
+                <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">{formData.id ? 'Guardar cambios' : 'Enviar solicitud'}</button>
               </div>
             </form>
           </div>

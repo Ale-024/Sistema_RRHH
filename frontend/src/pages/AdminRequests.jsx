@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { CheckCircle2, FileText, MessageSquareReply, XCircle } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { tienePermiso } from '../shared/roles';
 
 const filtros = [
   ['TODOS', 'Todas'],
@@ -30,6 +32,8 @@ function estadoBadge(estado) {
 }
 
 export default function AdminRequests() {
+  const { user } = useAuthStore();
+  const puedeAprobar = tienePermiso(user, 'permisos:aprobar');
   const [requests, setRequests] = useState([]);
   const [filter, setFilter] = useState('TODOS');
   const [loading, setLoading] = useState(true);
@@ -102,7 +106,7 @@ export default function AdminRequests() {
                     <td className="min-w-[210px] whitespace-pre-wrap px-6 py-4">{request.motivo}</td>
                     <td className="px-6 py-4">{estadoBadge(request.estado)}</td>
                     <td className="px-6 py-4 text-right">
-                      {request.estado === 'EN_REVISION' ? (
+                      {request.estado === 'EN_REVISION' && puedeAprobar ? (
                         <div className="flex justify-end gap-2">
                           <button onClick={() => updateRequest(request, 'solicitar-correccion')} className="inline-flex items-center rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100"><MessageSquareReply className="mr-1 h-4 w-4" /> Devolver</button>
                           <button onClick={() => updateRequest(request, 'aprobar')} className="inline-flex items-center rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"><CheckCircle2 className="mr-1 h-4 w-4" /> Aprobar</button>

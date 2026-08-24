@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { 
-  Building2, 
-  LayoutDashboard, 
-  Users, 
+import {
+  LayoutDashboard,
+  Users,
   CalendarClock,
   CalendarDays,
   FileText,
@@ -18,7 +17,7 @@ import {
 } from 'lucide-react';
 import NotificationsMenu from './NotificationsMenu';
 import ThemeToggle from './ThemeToggle';
-import { esRolAdministrativo, tienePermiso, ETIQUETAS_ROL } from '../shared/roles';
+import { esRolAdministrativo, tieneAlgunPermiso, tienePermiso, ETIQUETAS_ROL } from '../shared/roles';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -31,17 +30,18 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // `permisos` acepta un código o una lista: basta con poseer uno de ellos.
   const adminLinks = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { name: 'Empleados', path: '/admin/employees', icon: Users, permiso: 'empleados:leer' },
-    { name: 'Asistencia', path: '/admin/attendance', icon: CalendarClock, permiso: 'asistencia:leer_global' },
-    { name: 'Solicitudes', path: '/admin/requests', icon: FileText, permiso: 'solicitudes:revisar' },
-    { name: 'Vacaciones', path: '/admin/vacations', icon: CalendarDays, permiso: 'vacaciones:aprobar' },
-    { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permiso: 'planilla:leer_global' },
-    { name: 'Parámetros legales', path: '/admin/parameters', icon: Receipt, permiso: 'parametros:leer' },
-    { name: 'Usuarios', path: '/admin/usuarios', icon: Shield, permiso: 'usuarios:administrar' },
-    { name: 'Reportes', path: '/admin/reports', icon: BarChart3, permiso: 'reportes:ver' },
-  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
+    { name: 'Empleados', path: '/admin/employees', icon: Users, permisos: ['empleados:leer'] },
+    { name: 'Asistencia', path: '/admin/attendance', icon: CalendarClock, permisos: ['asistencia:leer_global'] },
+    { name: 'Solicitudes', path: '/admin/requests', icon: FileText, permisos: ['solicitudes:revisar', 'solicitudes:leer_global'] },
+    { name: 'Vacaciones', path: '/admin/vacations', icon: CalendarDays, permisos: ['vacaciones:aprobar', 'vacaciones:leer_global'] },
+    { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permisos: ['planilla:leer_global'] },
+    { name: 'Parámetros legales', path: '/admin/parameters', icon: Receipt, permisos: ['parametros:leer'] },
+    { name: 'Usuarios y roles', path: '/admin/usuarios', icon: Shield, permisos: ['usuarios:administrar', 'planilla:cerrar'] },
+    { name: 'Reportes', path: '/admin/reports', icon: BarChart3, permisos: ['reportes:ver', 'reportes:ver_global'] },
+  ].filter((l) => !l.permisos || tieneAlgunPermiso(user, l.permisos));
 
   const employeeLinks = [
     { name: 'Dashboard', path: '/employee', icon: LayoutDashboard },
@@ -70,9 +70,14 @@ export default function Layout() {
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="h-16 flex items-center px-6 border-b border-white/10">
-          <Building2 className="w-6 h-6 mr-3 text-brand-blue" />
-          <span className="text-lg font-bold tracking-wide">Sistema RRHH</span>
-          <button 
+          <div className="w-8 h-8 border border-white/40 flex items-center justify-center mr-3 shrink-0">
+            <span className="font-serif font-bold text-white text-sm leading-none">MT</span>
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-semibold tracking-[0.14em] uppercase text-white">Marketing Total</p>
+            <p className="text-[10px] text-brand-200 tracking-widest uppercase">Gestión Humana</p>
+          </div>
+          <button
             className="ml-auto lg:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           >
@@ -103,13 +108,13 @@ export default function Layout() {
                 to={link.path}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`
-                  flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
-                  ${isActive 
-                    ? 'bg-brand-blue text-white shadow-sm' 
-                    : 'text-slate-300 hover:bg-white/10 hover:text-white'}
+                  flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors
+                  ${isActive
+                    ? 'bg-white/10 text-white border-l-2 border-brand-200'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white'}
                 `}
               >
-                <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-brand-200' : 'text-slate-400'}`} />
                 {link.name}
               </Link>
             );

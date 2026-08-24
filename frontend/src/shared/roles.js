@@ -16,3 +16,8 @@ export function esRolAdministrativo(user) {
 export function tienePermiso(user, codigo) {
   return Array.isArray(user?.permisos) && user.permisos.includes(codigo);
 }
+
+// Verdadero si el usuario posee cualquiera de los permisos indicados.
+export function tieneAlgunPermiso(user, codigos) {
+  return codigos.some((codigo) => tienePermiso(user, codigo));
+}

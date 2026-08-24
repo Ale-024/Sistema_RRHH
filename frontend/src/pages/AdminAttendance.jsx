@@ -3,6 +3,8 @@ import api from '../services/api';
 import {
   CalendarClock, RefreshCw, Lock, Unlock, FileUp, Pencil, XCircle, Loader2,
 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { tienePermiso } from '../shared/roles';
 
 const ESTILOS = {
   PRESENTE: 'bg-green-100 text-green-700',
@@ -16,6 +18,7 @@ const ESTILOS = {
 };
 
 export default function AdminAttendance() {
+  const { user } = useAuthStore();
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [desde, setDesde] = useState('');
@@ -102,10 +105,22 @@ export default function AdminAttendance() {
       const res = await api.post('/admin/asistencia/importar-lote', { eventos });
       setTextoLote('');
       setModalImportar(false);
-      notificar(
-        'success',
-        `Importación: ${res.data.reporte.aceptados} aceptados, ${res.data.reporte.duplicados} duplicados, ${res.data.reporte.rechazados.length} rechazados.`
-      );
+      const r = res.data.reporte;
+      if (r.rechazados.length) {
+        const detalle = r.rechazados
+          .slice(0, 3)
+          .map((x) => `Línea ${x.indice + 1}: ${x.motivo}`)
+          .join(' · ');
+        notificar(
+          'error',
+          `${r.aceptados} aceptados, ${r.duplicados} duplicados, ${r.rechazados.length} rechazados. ${detalle}${r.rechazados.length > 3 ? ' …' : ''}`
+        );
+      } else {
+        notificar(
+          'success',
+          `Importación: ${r.aceptados} aceptados, ${r.duplicados} duplicados.`
+        );
+      }
     }, null);
 
   const guardarCorreccion = () =>
@@ -141,15 +156,21 @@ export default function AdminAttendance() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={consolidarHoy} disabled={ocupado} className="flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg text-sm">
-            <RefreshCw className={`w-4 h-4 mr-1 ${ocupado ? 'animate-spin' : ''}`} /> Consolidar hoy
-          </button>
-          <button onClick={cerrarRango} disabled={ocupado} className="flex items-center px-3 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium rounded-lg text-sm">
-            <Lock className="w-4 h-4 mr-1" /> Cerrar rango
-          </button>
-          <button onClick={() => setModalImportar(true)} className="flex items-center px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm">
-            <FileUp className="w-4 h-4 mr-1" /> Importar
-          </button>
+          {tienePermiso(user, 'asistencia:importar') && (
+            <button onClick={consolidarHoy} disabled={ocupado} className="flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg text-sm">
+              <RefreshCw className={`w-4 h-4 mr-1 ${ocupado ? 'animate-spin' : ''}`} /> Consolidar hoy
+            </button>
+          )}
+          {tienePermiso(user, 'asistencia:cerrar') && (
+            <button onClick={cerrarRango} disabled={ocupado} className="flex items-center px-3 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium rounded-lg text-sm">
+              <Lock className="w-4 h-4 mr-1" /> Cerrar rango
+            </button>
+          )}
+          {tienePermiso(user, 'asistencia:importar') && (
+            <button onClick={() => setModalImportar(true)} className="flex items-center px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm">
+              <FileUp className="w-4 h-4 mr-1" /> Importar
+            </button>
+          )}
         </div>
       </div>
 
@@ -213,25 +234,29 @@ export default function AdminAttendance() {
                     <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                       {!r.cerrado ? (
                         <>
-                          <button
-                            onClick={() => { setCorreccion({ id: r.id, estadoDia: r.estadoDia }); setMotivoCorreccion(''); }}
-                            className="inline-flex items-center px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
-                            title="Corregir"
-                          >
-                            <Pencil className="w-3.5 h-3.5 mr-0.5" /> Corregir
-                          </button>
-                          <button
-                            onClick={() =>
-                              ejecutar(
-                                () => api.post('/admin/asistencia/cierre', { desde: r.fecha, hasta: r.fecha }),
-                                'Día cerrado.'
-                              )
-                            }
-                            className="inline-flex items-center px-2 py-1 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded"
-                            title="Cerrar día"
-                          >
-                            <Lock className="w-3.5 h-3.5" />
-                          </button>
+                          {tienePermiso(user, 'asistencia:corregir') && (
+                            <button
+                              onClick={() => { setCorreccion({ id: r.id, estadoDia: r.estadoDia }); setMotivoCorreccion(''); }}
+                              className="inline-flex items-center px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
+                              title="Corregir"
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-0.5" /> Corregir
+                            </button>
+                          )}
+                          {tienePermiso(user, 'asistencia:cerrar') && (
+                            <button
+                              onClick={() =>
+                                ejecutar(
+                                  () => api.post('/admin/asistencia/cierre', { desde: r.fecha, hasta: r.fecha }),
+                                  'Día cerrado.'
+                                )
+                              }
+                              className="inline-flex items-center px-2 py-1 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded"
+                              title="Cerrar día"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </>
                       ) : (
                         <button

@@ -191,9 +191,27 @@ export default function EmployeeAttendance() {
       </div>
 
       {/* Marcajes de hoy */}
-      {estadoHoy?.marcajesDelDia > 0 && (
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-          <Clock className="w-4 h-4" /> Hoy has registrado {estadoHoy.marcajesDelDia} marcaje(s).
+      {estadoHoy?.marcajes?.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <Clock className="w-4 h-4" /> Marcajes de hoy
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {estadoHoy.marcajes.map((m) => (
+              <span
+                key={m.id}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg ${
+                  m.tipo === 'ENTRADA'
+                    ? 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                    : 'bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                }`}
+              >
+                {m.tipo === 'ENTRADA' ? <LogIn className="w-4 h-4" /> : <LogOut className="w-4 h-4" />}
+                {m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida'}
+                <strong>{new Date(m.ocurridoEn).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}</strong>
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

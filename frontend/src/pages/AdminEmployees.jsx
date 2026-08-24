@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Plus, Search, UserCheck, UserX, Edit, XCircle } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { tienePermiso } from '../shared/roles';
 
 export default function AdminEmployees() {
+  const { user } = useAuthStore();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,9 +139,11 @@ export default function AdminEmployees() {
           <h1 className="text-2xl font-bold text-slate-900">Gestión de Empleados</h1>
           <p className="text-slate-500 mt-1">Administra la información de todos los empleados</p>
         </div>
-        <button onClick={openCreateModal} className="flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors">
-          <Plus className="w-5 h-5 mr-1" /> Nuevo Empleado
-        </button>
+        {tienePermiso(user, 'empleados:crear') && (
+          <button onClick={openCreateModal} className="flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors">
+            <Plus className="w-5 h-5 mr-1" /> Nuevo Empleado
+          </button>
+        )}
       </div>
 
       {message.text && (
@@ -193,12 +198,16 @@ export default function AdminEmployees() {
                       }
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button onClick={() => openEditModal(emp)} className="inline-flex items-center p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => toggleActive(emp)} className={`inline-flex items-center p-1.5 rounded-lg transition-colors ${emp.usuario?.estado === 'ACTIVO' ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'}`} title={emp.usuario?.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}>
-                        {emp.usuario?.estado === 'ACTIVO' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                      </button>
+                      {tienePermiso(user, 'empleados:actualizar') && (
+                        <button onClick={() => openEditModal(emp)} className="inline-flex items-center p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      {tienePermiso(user, 'empleados:desvincular') && (
+                        <button onClick={() => toggleActive(emp)} className={`inline-flex items-center p-1.5 rounded-lg transition-colors ${emp.usuario?.estado === 'ACTIVO' ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'}`} title={emp.usuario?.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}>
+                          {emp.usuario?.estado === 'ACTIVO' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -244,12 +253,41 @@ export default function AdminEmployees() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">DNI</label>
-                  <input type="text" required value={formData.dni} onChange={(e) => setFormData({...formData, dni: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Identidad (DNI)
+                    <span className="ml-1 text-xs text-slate-400">13 dígitos</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    inputMode="numeric"
+                    maxLength={13}
+                    value={formData.dni}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '').slice(0, 13) })}
+                    placeholder="0000000000000"
+                    className={`w-full p-2.5 border rounded-lg ${formData.dni && formData.dni.length !== 13 ? 'border-red-400' : 'border-slate-300'}`}
+                  />
+                  {formData.dni && formData.dni.length !== 13 && (
+                    <p className="mt-1 text-xs text-red-500">La identidad debe tener exactamente 13 dígitos.</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-                  <input type="text" value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Teléfono
+                    <span className="ml-1 text-xs text-slate-400">8 dígitos</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={formData.telefono}
+                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+                    placeholder="00000000"
+                    className={`w-full p-2.5 border rounded-lg ${formData.telefono && formData.telefono.length !== 8 ? 'border-red-400' : 'border-slate-300'}`}
+                  />
+                  {formData.telefono && formData.telefono.length !== 8 && (
+                    <p className="mt-1 text-xs text-red-500">El teléfono debe tener exactamente 8 dígitos.</p>
+                  )}
                 </div>
               </div>
               <div>
