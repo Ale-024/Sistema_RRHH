@@ -28,6 +28,13 @@ async function main() {
     console.log(`SIRH-MKT API escuchando en el puerto ${entorno.PORT}`);
   });
 
+  // Tareas programadas (desactivables con RUN_CRON=false).
+  if (process.env.RUN_CRON !== 'false') {
+    const cron = require('node-cron');
+    const { registrarTareasProgramadas } = require('./jobs/index');
+    registrarTareasProgramadas(ctx, cron);
+  }
+
   async function apagar() {
     server.close();
     await prisma.$disconnect();

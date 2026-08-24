@@ -1,57 +1,80 @@
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
+const { hashEvento } = require('./hash-evento');
 
 /**
- * Registro de marcaje del MVP: un par entrada/salida por dia.
- * Nota (Fase 3 lo reemplaza): los umbrales de tardanza estan fijados
- * en codigo; pasaran a la tabla Turno.
+ * CU02 - Marcaje propio del empleado (web o movil responsivo).
+ * El tipo (ENTRADA/SALIDA) se deriva del estado del dia: si existe
+ * marcaje de entrada sin salida, el siguiente es SALIDA.
+ * Los umbrales de tardanza ya no viven aqui: los resuelve el consolidado
+ * contra el turno asignado.
  */
-async function registrarMarcaje(empleadoId, ahora, { prisma, bus }) {
+async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, ctx) {
+  const { prisma, clock, bus } = ctx;
+  const ahora = clock.ahora();
+
   const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   const finDia = new Date(inicioDia);
   finDia.setDate(finDia.getDate() + 1);
 
-  const existente = await prisma.asistencia.findFirst({
-    where: {
-      empleado_id: empleadoId,
-      fecha_hora_entrada: { gte: inicioDia, lt: finDia },
-    },
+  // Ultima salida y ultima entrada del dia para decidir el tipo.
+  const ultimaSalida = await prisma.marcaje.findFirst({
+    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia }, tipo: 'SALIDA' },
+    orderBy: { ocurridoEn: 'desc' },
   });
-
-  if (existente) {
-    if (!existente.fecha_hora_salida) {
-      const actualizada = await prisma.asistencia.update({
-        where: { id: existente.id },
-        data: { fecha_hora_salida: ahora },
+  const ultimaEntrada = ultimaSalida
+    ? null
+    : await prisma.marcaje.findFirst({
+        where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia }, tipo: 'ENTRADA' },
+        orderBy: { ocurridoEn: 'desc' },
       });
-      return { message: 'Salida registrada', data: actualizada };
-    }
+
+  // Antirrepeticion inmediata (doble toque accidental). Configurable
+  // por entorno; en pruebas se fija en 0.
+  const segundosAntirrepeticion = Number(ctx.entorno?.SEGUNDOS_ANTIRREPETICION ?? 60);
+  if (
+    segundosAntirrepeticion > 0 &&
+    ultimaEntrada &&
+    ultimaEntrada.ocurridoEn > new Date(ahora - segundosAntirrepeticion * 1000)
+  ) {
     throw new ErrorAplicacion(
-      'MARCAJE_DUPLICADO',
+      'MARCAJE_REPETIDO',
       400,
-      'Ya registraste entrada y salida hoy.'
+      'Acabas de registrar un marcaje. Espera un momento.'
     );
   }
 
-  const hora = ahora.getHours();
-  const minutos = ahora.getMinutes();
-  let estado = 'FALTA';
+  const tipo = ultimaEntrada ? 'SALIDA' : 'ENTRADA';
 
-  if (hora < 9 || (hora === 9 && minutos <= 15)) {
-    estado = 'PRESENTE';
-  } else if (hora < 10) {
-    estado = 'RETARDO';
+  try {
+    const marcaje = await prisma.marcaje.create({
+      data: {
+        empleadoId,
+        ocurridoEn: ahora,
+        tipo,
+        origen: latitud != null ? 'MOVIL' : 'WEB',
+        dispositivo: dispositivo ?? 'web',
+        latitud: latitud ?? null,
+        longitud: longitud ?? null,
+        hashEvento: hashEvento(empleadoId, ahora, tipo),
+      },
+    });
+
+    bus.publicar('MarcajeRegistrado', { empleadoId, tipo });
+    return {
+      message: tipo === 'ENTRADA' ? 'Entrada registrada' : 'Salida registrada',
+      data: marcaje,
+    };
+  } catch (error) {
+    // Colision de hashEvento: el mismo marcaje ya fue registrado.
+    if (error.code === 'P2002') {
+      throw new ErrorAplicacion(
+        'MARCAJE_DUPLICADO',
+        409,
+        'Este marcaje ya fue registrado.'
+      );
+    }
+    throw error;
   }
-
-  const asistencia = await prisma.asistencia.create({
-    data: {
-      empleado_id: empleadoId,
-      fecha_hora_entrada: ahora,
-      estado,
-    },
-  });
-
-  bus.publicar('MarcajeRegistrado', { empleadoId, estado });
-  return { message: 'Entrada registrada', data: asistencia };
 }
 
 module.exports = { registrarMarcaje };

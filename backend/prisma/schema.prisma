@@ -132,7 +132,9 @@ model Empleado {
   estadoLaboral       String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | VACACIONES | INACTIVO
   causaSalida         String?
 
-  asistencias    Asistencia[]
+  asistencias    RegistroAsistencia[]
+  marcajes       Marcaje[]
+  horarios       HorarioEmpleado[]
   solicitudes    Solicitud[]
   nominas        Nomina[]
   notificaciones Notificacion[]
@@ -192,15 +194,86 @@ model DocumentoEmpleado {
 
 // ════════════════════════ ASISTENCIA ════════════════════════
 
-model Asistencia {
-  id                 Int      @id @default(autoincrement())
-  empleado_id        Int
-  empleado           Empleado @relation(fields: [empleado_id], references: [id])
-  fecha_hora_entrada DateTime
-  fecha_hora_salida  DateTime?
-  estado             String // "PRESENTE" | "RETARDO" | "FALTA"
+/// Turno configurable: planta, campo o call center.
+model Turno {
+  id               Int     @id @default(autoincrement())
+  nombre           String
+  horaEntrada      String // "08:00" en hora local
+  horaSalida       String // "17:00"
+  cruzaMedianoche  Boolean @default(false)
+  toleranciaMin    Int     @default(10)
+  minutosAlmuerzo  Int     @default(60)
+  diasSemana       String  @default("1,2,3,4,5") // ISO: 1=lunes
+  activo           Boolean @default(true)
 
-  @@index([fecha_hora_entrada])
+  horarios    HorarioEmpleado[]
+  asistencias RegistroAsistencia[]
+}
+
+/// Asignacion de turno por empleado con vigencia.
+model HorarioEmpleado {
+  id         Int       @id @default(autoincrement())
+  empleadoId Int
+  turnoId    Int
+  turno      Turno     @relation(fields: [turnoId], references: [id])
+  desde      DateTime
+  hasta      DateTime?
+
+  empleado Empleado @relation(fields: [empleadoId], references: [id])
+
+  @@unique([empleadoId, desde])
+}
+
+/// Evento crudo de marcaje. Inmutable (trigger); el consolidado es derivado.
+model Marcaje {
+  id            Int      @id @default(autoincrement())
+  empleadoId    Int
+  empleado      Empleado @relation(fields: [empleadoId], references: [id])
+  ocurridoEn    DateTime
+  tipo          String // ENTRADA | SALIDA
+  origen        String   @default("WEB") // WEB | MANUAL | IMPORTADO | BIOMETRICO
+  dispositivo   String?
+  latitud       Float?
+  longitud      Float?
+  registradoPor Int? /// obligatorio cuando origen = MANUAL
+  hashEvento    String   @unique /// idempotencia: sha256(empleado|momento|tipo)
+  creadoEn      DateTime @default(now())
+
+  @@index([empleadoId, ocurridoEn])
+  @@index([ocurridoEn])
+}
+
+/// Consolidado diario derivado del marcaje; un registro por empleado y fecha.
+model RegistroAsistencia {
+  id                   Int       @id @default(autoincrement())
+  empleadoId           Int
+  empleado             Empleado  @relation(fields: [empleadoId], references: [id])
+  fecha                DateTime /// medianoche local del dia consolidado
+  turnoId              Int?
+  turno                Turno?    @relation(fields: [turnoId], references: [id])
+  horaEntrada          DateTime?
+  horaSalida           DateTime?
+  minutosTrabajados    Int       @default(0)
+  minutosTardanza      Int       @default(0)
+  horasExtraDiurnas    Float     @default(0)
+  horasExtraNocturnas  Float     @default(0)
+  estadoDia            String // PRESENTE | AUSENTE | TARDANZA | PERMISO | VACACION | INCAPACIDAD | DESCANSO | FERIADO
+  observacion          String?
+  cerrado              Boolean   @default(false)
+  cerradoPor           Int?
+  cerradoEn            DateTime?
+
+  @@unique([empleadoId, fecha])
+  @@index([fecha, estadoDia])
+}
+
+/// Feriados nacionales y asuetos de empresa; insumo del consolidado.
+model DiaFeriado {
+  id         Int      @id @default(autoincrement())
+  fecha      DateTime @unique
+  nombre     String
+  tipo       String   @default("NACIONAL") // NACIONAL | EMPRESA
+  remunerado Boolean  @default(true)
 }
 
 // ═════════════════════════ PERMISOS ═════════════════════════

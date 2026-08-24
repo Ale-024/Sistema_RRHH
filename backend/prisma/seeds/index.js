@@ -33,14 +33,40 @@ async function sembrarIam() {
   }
 }
 
-async function sembrarAdmin() {
-  const depto = await prisma.departamento.create({
-    data: { nombre: 'Recursos Humanos', descripcion: 'Departamento central de RRHH' },
-  });
+async function sembrarCatalogos() {
+  const existente = await prisma.turno.findFirst({ where: { nombre: 'Administrativo' } });
+  if (!existente) {
+    await prisma.turno.create({
+      data: {
+        nombre: 'Administrativo',
+        horaEntrada: '08:00',
+        horaSalida: '17:00',
+        toleranciaMin: 10,
+        minutosAlmuerzo: 60,
+        diasSemana: '1,2,3,4,5',
+      },
+    });
+  }
+}
 
-  const puesto = await prisma.puesto.create({
-    data: { titulo: 'Director de RRHH', departamento_id: depto.id },
-  });
+async function sembrarAdmin() {
+  let depto = await prisma.departamento.findFirst({ where: { nombre: 'Recursos Humanos' } });
+  if (!depto) {
+    depto = await prisma.departamento.create({
+      data: { nombre: 'Recursos Humanos', descripcion: 'Departamento central de RRHH' },
+    });
+  }
+
+  let puesto = await prisma.puesto.findFirst({ where: { titulo: 'Director de RRHH' } });
+  if (!puesto) {
+    puesto = await prisma.puesto.create({
+      data: { titulo: 'Director de RRHH', departamento_id: depto.id },
+    });
+  }
+
+  if (await prisma.usuario.findUnique({ where: { email: 'admin@sistemarrhh.com' } })) {
+    return; // administrador ya sembrado
+  }
 
   const adminRol = await prisma.rol.findUnique({ where: { codigo: 'ADMIN_TI' } });
   const rrhhRol = await prisma.rol.findUnique({ where: { codigo: 'RRHH_SUP' } });
@@ -74,9 +100,24 @@ async function sembrarAdmin() {
   });
 }
 
+async function sembrarCatalogos() {
+  await prisma.turno.create({
+    data: {
+      nombre: 'Administrativo',
+      horaEntrada: '08:00',
+      horaSalida: '17:00',
+      toleranciaMin: 10,
+      minutosAlmuerzo: 60,
+      diasSemana: '1,2,3,4,5',
+    },
+  });
+}
+
 async function main() {
   console.log('Sembrando roles y permisos...');
   await sembrarIam();
+  console.log('Sembrando catalogos iniciales (turnos)...');
+  await sembrarCatalogos();
   console.log('Sembrando administrador inicial...');
   await sembrarAdmin();
   console.log('Seed completado.');
