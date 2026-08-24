@@ -49,8 +49,35 @@ function rutasReportes(ctx) {
   const router = express.Router();
   router.use(exigirAccesoReportes);
 
+  // Los reportes leen tablas de proyeccion; sin refresco previo siempre
+  // estarian vacias. Se actualiza SOLO el mes solicitado al vuelo.
+  // Reglas de resiliencia (aprendidas bajo carga):
+  //  - un solo refresco en vuelo: los demas esperan el mismo promise;
+  //  - un fallo de refresco NUNCA se propaga ni queda sin manejar
+  //    (mato el proceso por unhandledRejection): se registra y se sirve
+  //    la proyeccion existente, aunque este desactualizada.
+  let refrescoEnVuelo = null;
+  const asegurarProyecciones = async (consulta) => {
+    if (refrescoEnVuelo) {
+      try { await refrescoEnVuelo; } catch { /* otro ya registro el fallo */ }
+      return;
+    }
+    const anio = consulta?.anio ?? new Date().getFullYear();
+    const mes = consulta?.mes ?? new Date().getMonth() + 1;
+    const desde = new Date(Date.UTC(anio, mes - 1, 1));
+    const hasta = new Date(Date.UTC(anio, mes, 0));
+    refrescoEnVuelo = refrescarProyecciones(ctx, { desde, hasta }).catch((error) => {
+      console.error('[reportes] Refresco de proyecciones fallo (se sirven datos previos):', error.message);
+    });
+    try {
+      await refrescoEnVuelo;
+    } catch { /* inalcanzable: el catch anterior ya normalizo */ }
+    finally { refrescoEnVuelo = null; }
+  };
+
   router.get('/asistencia', validar({ query: esquemaConsulta }), async (req, res, next) => {
     try {
+      await asegurarProyecciones(req.query);
       const filas = await reportes.asistencia(req.query, req.contexto, ctx);
       responderReporte(res, 'asistencia', filas.map((fila) => ({
         anio: fila.anio, mes: fila.mes, empleadoId: fila.empleadoId,
@@ -64,15 +91,15 @@ function rutasReportes(ctx) {
   });
 
   router.get('/ausentismo', validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { responderReporte(res, 'ausentismo', await reportes.ausentismo(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'ausentismo', await reportes.ausentismo(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
   });
 
   router.get('/personal-por-proyecto', validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { responderReporte(res, 'personal-por-proyecto', await reportes.personalPorProyecto(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'personal-por-proyecto', await reportes.personalPorProyecto(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
   });
 
   router.get('/costo-planilla', exigirPermiso('reportes:ver_global'), validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { responderReporte(res, 'costo-planilla', filasPlanillas(await reportes.costoPlanilla(req.query, req.contexto, ctx)), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'costo-planilla', filasPlanillas(await reportes.costoPlanilla(req.query, req.contexto, ctx)), req.query.formato); } catch (error) { next(error); }
   });
 
   router.get('/empleados/buscar', validar({ query: esquemaTexto }), async (req, res, next) => {

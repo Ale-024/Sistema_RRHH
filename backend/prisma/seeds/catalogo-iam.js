@@ -47,18 +47,21 @@ const PERMISOS = [
 const ROLES = [
   {
     codigo: 'EMPLEADO',
+    nivelAutoridad: 10,
     nombre: 'Empleado',
     descripcion: 'Autoservicio: marcaje, solicitudes propias y perfil.',
     permisos: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear', 'planilla:leer'],
   },
   {
     codigo: 'ENCUESTADOR',
+    nivelAutoridad: 10,
     nombre: 'Encuestador de campo',
     descripcion: 'Perfiles de campo; marcaje con geolocalizacion en fases posteriores.',
     permisos: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear', 'planilla:leer'],
   },
   {
     codigo: 'RRHH_SUP',
+    nivelAutoridad: 50,
     nombre: 'Supervisor de RRHH',
     descripcion: 'Gestion completa de personal, catalogos y revision de solicitudes.',
     permisos: [
@@ -89,18 +92,21 @@ const ROLES = [
   },
   {
     codigo: 'GERENTE_DEPTO',
+    nivelAutoridad: 30,
     nombre: 'Gerente de departamento',
     descripcion: 'Visibilidad limitada a su departamento mediante scope ABAC.',
     permisos: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'reportes:ver'],
   },
   {
     codigo: 'DIRECCION',
+    nivelAutoridad: 90,
     nombre: 'Direccion general',
-    descripcion: 'Lectura global de planilla y auditoria; autorizacion de cierres.',
-    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'auditoria:leer', 'reportes:ver_global'],
+    descripcion: 'Lectura global de planilla y auditoria; autorizacion de cierres; administracion de parametros legales.',
+    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'reportes:ver_global'],
   },
   {
     codigo: 'ADMIN_TI',
+    nivelAutoridad: 50,
     nombre: 'Administrador de TI',
     descripcion: 'Usuarios, roles y bitacora. Sin operaciones de negocio.',
     permisos: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],

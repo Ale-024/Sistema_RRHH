@@ -182,7 +182,7 @@ describe('Fase 2: seguridad y reglas', () => {
         password: 'temporal123',
         nombres: 'Nueva',
         apellidos: 'Contratacion',
-        dni: '9988776655',
+        dni: '9988776655001',
         fecha_ingreso: '2026-01-15',
         puesto_id: (
           await prisma.puesto.findFirst({ where: { titulo: 'Analista A' } })

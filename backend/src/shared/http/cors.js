@@ -10,6 +10,7 @@ function middlewareCors(entorno) {
       }
       callback(new Error(`Origen no permitido: ${origen}`));
     },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   });
 }

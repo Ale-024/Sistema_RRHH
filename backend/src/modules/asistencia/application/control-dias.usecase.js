@@ -5,13 +5,35 @@ const auditoria = require('../../auditoria/application/auditoria.service');
  * Cierre de dias: bloquea la edicion (ademas del trigger de BD).
  * La reapertura exige motivo y queda auditada.
  */
+
+/**
+ * Normaliza una fecha (posiblemente 'YYYY-MM-DD' en UTC) al inicio del dia
+ * LOCAL, que es como se guardan las fechas de RegistroAsistencia.
+ */
+function aDiaLocal(valor) {
+  const iso = valor instanceof Date ? valor.toISOString() : String(valor ?? '');
+  let m = /^(\d{4})-(\d{2})-(\d{2})T00:00:00(?:\.\d+)?Z$/.exec(iso);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m && !(valor instanceof Date)) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = valor instanceof Date ? valor : new Date(valor);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Fin inclusivo del dia local para rangos. */
+function finDeDiaLocal(valor) {
+  const d = aDiaLocal(valor);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 async function cerrarDias({ desde, hasta }, contexto, ctx) {
   const { prisma } = ctx;
-  if (desde > hasta) {
+  if (aDiaLocal(desde) > aDiaLocal(hasta)) {
     throw new ErrorAplicacion('RANGO_INVALIDO', 422, 'El rango de fechas es invalido.');
   }
   const resultado = await prisma.registroAsistencia.updateMany({
-    where: { fecha: { gte: desde, lte: hasta }, cerrado: false },
+    where: { fecha: { gte: aDiaLocal(desde), lte: finDeDiaLocal(hasta) }, cerrado: false },
     data: { cerrado: true, cerradoPor: contexto.usuarioId, cerradoEn: new Date() },
   });
 
@@ -37,7 +59,7 @@ async function reabrirDia({ empleadoId, fecha, motivo }, contexto, ctx) {
   }
 
   const registro = await prisma.registroAsistencia.findUnique({
-    where: { empleadoId_fecha: { empleadoId, fecha } },
+    where: { empleadoId_fecha: { empleadoId, fecha: aDiaLocal(fecha) } },
   });
   if (!registro) {
     throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'No existe registro para esa fecha.');

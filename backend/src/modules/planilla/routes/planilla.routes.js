@@ -85,6 +85,41 @@ function rutasAdmin(ctx) {
   router.post('/parametros-legales', exigirPermiso('parametros:administrar'), validar({ body: esquemas.crearParametro }), async (req, res, next) => {
     try { res.status(201).json({ data: await prisma.parametroLegal.create({ data: { ...req.body, creadoPor: req.user.id } }) }); } catch (error) { next(error); }
   });
+  // Edicion de vigencia abierta. Reglas de seguridad:
+  //  - exige parametros:administrar y motivo documentado;
+  //  - nunca permite editar vigencias ya vencidas (historial inmutable);
+  //  - deja auditoria antes/despues.
+  router.patch(
+    '/parametros-legales/:id',
+    exigirPermiso('parametros:administrar'),
+    validar({ params: esquemas.idNumerico, body: esquemas.editarParametro }),
+    async (req, res, next) => {
+      try {
+        const anterior = await prisma.parametroLegal.findUnique({ where: { id: req.params.id } });
+        if (!anterior) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Parametro no encontrado.');
+        const hoy = new Date();
+        if (anterior.vigenciaHasta && anterior.vigenciaHasta < hoy) {
+          throw new ErrorAplicacion('VIGENCIA_CERRADA', 409, 'No se puede editar una vigencia ya vencida. Cree una nueva vigencia.');
+        }
+        const cambios = (({ valor, descripcion, baseLegal }) => ({ valor, descripcion, baseLegal }))(req.body);
+        const actualizado = await prisma.parametroLegal.update({ where: { id: anterior.id }, data: cambios });
+        await prisma.auditoria.create({
+          data: {
+            usuarioId: req.user.id,
+            entidad: 'ParametroLegal',
+            entidadId: anterior.id,
+            accion: 'EDITAR_PARAMETRO_LEGAL',
+            antes: JSON.stringify(anterior),
+            despues: JSON.stringify(actualizado),
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            requestId: req.contexto?.requestId,
+          },
+        });
+        res.json({ data: actualizado, message: 'Parametro actualizado y auditado.' });
+      } catch (error) { next(error); }
+    }
+  );
   return router;
 }
 

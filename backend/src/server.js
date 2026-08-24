@@ -42,6 +42,12 @@ async function main() {
     await prisma.$disconnect();
   }
 
+  // Red de seguridad: un rechazo no manejado no debe tumbar el proceso
+  // (Node >= 15 sale por defecto). Se registra y el servicio continua.
+  process.on('unhandledRejection', (razon) => {
+    console.error('[unhandledRejection]', razon);
+  });
+
   process.on('SIGINT', apagar);
   process.on('SIGTERM', apagar);
 }

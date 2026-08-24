@@ -96,7 +96,10 @@ function rutasAuth(ctx) {
     try {
       const usuario = await ctx.prisma.usuario.findUnique({ where: { id: req.user.id }, include: { roles: { include: { rol: true } } } });
       if (!usuario || !usuarioRequiereMfa(usuario)) throw new ErrorAplicacion('MFA_NO_APLICA', 403, 'El segundo factor no aplica a este perfil.');
-      if (!req.user.mfa_setup && usuario.mfaSecret) throw new ErrorAplicacion('MFA_YA_CONFIGURADO', 409, 'El MFA ya esta configurado.');
+      // El estado real manda sobre el claim del token: si ya hay secreto
+      // activo (no PENDING), no se regenera aunque el token sea de setup.
+      const yaConfigurado = usuario.mfaSecret && !usuario.mfaSecret.startsWith('PENDING:');
+      if (yaConfigurado) throw new ErrorAplicacion('MFA_YA_CONFIGURADO', 409, 'El MFA ya esta configurado.');
       const secreto = crearSecretoTotp();
       await ctx.prisma.usuario.update({ where: { id: usuario.id }, data: { mfaSecret: `PENDING:${secreto}` } });
       res.json({ secret: secreto, otpauth: uriTotp(secreto, usuario.email), mensaje: 'Confirme el codigo de su aplicacion autenticadora.' });

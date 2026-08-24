@@ -1,5 +1,6 @@
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
 const { hashEvento } = require('./hash-evento');
+const { consolidarDia } = require('./consolidar-dia.usecase');
 
 /**
  * CU02 - Marcaje propio del empleado (web o movil responsivo).
@@ -60,6 +61,14 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, 
     });
 
     bus.publicar('MarcajeRegistrado', { empleadoId, tipo });
+    // Auto-consolidacion del dia: el registro diario (con hora de entrada
+    // y salida) queda visible de inmediato para empleado y supervisor.
+    // Es idempotente; un fallo aqui no revierte el marcaje ya guardado.
+    try {
+      await consolidarDia(ahora, ctx);
+    } catch (errorConsolidacion) {
+      console.error('Auto-consolidacion post-marcaje fallo:', errorConsolidacion.message);
+    }
     return {
       message: tipo === 'ENTRADA' ? 'Entrada registrada' : 'Salida registrada',
       data: marcaje,

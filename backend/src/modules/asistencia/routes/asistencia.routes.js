@@ -30,18 +30,32 @@ const esquemaRangoFechas = z.object({
   hasta: z.coerce.date().optional(),
 });
 
+/**
+ * Convierte 'hasta' (medianoche) en limite EXCLUSIVO del dia siguiente;
+ * de lo contrario el rango excluye todo el ultimo dia seleccionado.
+ */
+function inicioDeDiaLocal(valor) {
+  const iso = valor instanceof Date ? valor.toISOString() : String(valor ?? '');
+  let m = /^(\d{4})-(\d{2})-(\d{2})T00:00:00(?:\.\d+)?Z$/.exec(iso);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m && !(valor instanceof Date)) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = valor instanceof Date ? valor : new Date(valor);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Convierte 'hasta' en limite EXCLUSIVO de fin del dia LOCAL. */
+function finDeDia(hasta) {
+  const fin = inicioDeDiaLocal(hasta);
+  fin.setDate(fin.getDate() + 1);
+  return fin;
+}
+
 const esquemaImportarLote = z.object({
-  eventos: z
-    .array(
-      z.object({
-        empleadoId: z.coerce.number().int().positive(),
-        ocurridoEn: z.coerce.date(),
-        tipo: z.enum(['ENTRADA', 'SALIDA']),
-        dispositivo: z.string().trim().max(60).optional(),
-      })
-    )
-    .min(1)
-    .max(5000),
+  // Campos libres a proposito: la validacion fina es por linea en el
+  // usecase, que reporta cada linea mala en `rechazados` sin abortar
+  // todo el lote.
+  eventos: z.array(z.record(z.unknown())).min(1).max(5000),
 });
 
 const esquemaCierre = z.object({
@@ -127,7 +141,7 @@ function rutasEmpleado(ctx) {
           await prisma.registroAsistencia.findMany({
             where: {
               empleadoId: req.user.empleado_id,
-              ...(desde || hasta ? { fecha: { ...(desde ? { gte: desde } : {}), ...(hasta ? { lte: hasta } : {}) } } : {}),
+              ...(desde || hasta ? { fecha: { ...(desde ? { gte: inicioDeDiaLocal(desde) } : {}), ...(hasta ? { lt: finDeDia(hasta) } : {}) } } : {}),
             },
             include: { turno: { select: { nombre: true } } },
             orderBy: { fecha: 'desc' },
@@ -152,10 +166,16 @@ function rutasEmpleado(ctx) {
       });
       const ultimaEntrada = [...marcajes].reverse().find((m) => m.tipo === 'ENTRADA');
       const haySalidaDespues = ultimaEntrada && marcajes.some((m) => m.tipo === 'SALIDA' && m.ocurridoEn > ultimaEntrada.ocurridoEn);
+      // Detalle de los marcajes del dia para que la UI muestre las horas.
+      const detalle = marcajes.map((m) => ({ id: m.id, tipo: m.tipo, ocurridoEn: m.ocurridoEn }));
+      const salida = [...detalle].reverse().find((m) => m.tipo === 'SALIDA');
       res.json({
         puedeMarcarEntrada: !ultimaEntrada || haySalidaDespues,
         proximoTipo: !ultimaEntrada || haySalidaDespues ? 'ENTRADA' : 'SALIDA',
         marcajesDelDia: marcajes.length,
+        marcajes: detalle,
+        ultimaEntrada: ultimaEntrada?.ocurridoEn || null,
+        ultimaSalida: salida?.ocurridoEn || null,
       });
     } catch (error) {
       next(error);
@@ -185,7 +205,7 @@ function rutasAdmin(ctx) {
             where: aplicarAlcanceRelacion(
               'empleado',
               desde || hasta
-                ? { fecha: { ...(desde ? { gte: desde } : {}), ...(hasta ? { lte: hasta } : {}) } }
+                ? { fecha: { ...(desde ? { gte: inicioDeDiaLocal(desde) } : {}), ...(hasta ? { lt: finDeDia(hasta) } : {}) } }
                 : {},
               req.contexto
             ),

@@ -85,7 +85,7 @@ function rutasEmpleado(ctx) {
     validar({ body: esquemaPasswordLegacy }),
     async (req, res, next) => {
       try {
-        const { cambiarPassword } = require('../iam/application/cambiar-password.usecase');
+        const { cambiarPassword } = require('../../iam/iam.module');
         res.json(
           await cambiarPassword(req.user.id, req.body.currentPassword, req.body.newPassword, {
             ...ctx,

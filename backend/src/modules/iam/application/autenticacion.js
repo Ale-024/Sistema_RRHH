@@ -20,7 +20,9 @@ function verificarToken(req, _res, next) {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch {
-    next(new ErrorAplicacion('TOKEN_INVALIDO', 403, 'Token invalido o expirado.'));
+    // 401 (no 403): permite al frontend distinguir sesion expirada
+    // de permiso denegado y disparar el refresh/relogin.
+    next(new ErrorAplicacion('TOKEN_INVALIDO', 401, 'Sesion invalida o expirada.'));
   }
 }
 

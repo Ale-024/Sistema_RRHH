@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { crearBaseTemporal } from './helpers/db-temporal.js';
 import { refrescarAsistencia } from '../src/modules/reportes/application/proyecciones.usecase.js';
 import * as consultas from '../src/modules/reportes/application/reportes.usecase.js';
 import { crearPdfReporte, crearXlsx } from '../src/modules/reportes/application/formatos.js';
 import { codigoTotp, verificarCodigoTotp } from '../src/modules/iam/application/mfa.js';
+
+// La exportacion a XLSX y los refrescos son pesados bajo carga paralela.
+vi.setConfig({ testTimeout: 30_000 });
 
 describe('Fase 7 - reportes y endurecimiento', () => {
   it('refresca asistencia, respeta alcance y busca por FTS5', async () => {

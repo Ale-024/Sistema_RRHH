@@ -2,13 +2,11 @@ const express = require('express');
 const {
   actualizarSolicitud,
   cambiarEstado,
-  consulta,
   crearSolicitud,
-  idNumerico,
-  motivoOpcional,
-  motivoRequerido,
 } = require('../application/permisos.usecase');
 const esquemas = require('./esquemas');
+// Los esquemas de validacion viven SOLO en ./esquemas; el usecase nunca los
+// exporto y usarlos desestructurados desde ahi era undefined silencioso.
 const validar = require('../../../shared/http/validar');
 const { exigirPermiso } = require('../../../shared/http/autorizacion');
 const { aplicarAlcanceRelacion } = require('../../../shared/dominio/alcance');
@@ -91,7 +89,7 @@ function rutasEmpleado(ctx) {
 
   router.put(
     '/requests/:id',
-    validar({ params: idNumerico, body: esquemas.actualizarSolicitud }),
+    validar({ params: esquemas.idNumerico, body: esquemas.actualizarSolicitud }),
     async (req, res, next) => {
       try {
         const solicitud = await actualizarSolicitud({
@@ -109,7 +107,7 @@ function rutasEmpleado(ctx) {
 
   router.post(
     '/requests/:id/enviar',
-    validar({ params: idNumerico, body: motivoOpcional }),
+    validar({ params: esquemas.idNumerico, body: esquemas.motivoOpcional }),
     async (req, res, next) => {
       try {
         await obtenerSolicitudPropia(prisma, Number(req.params.id), req.user.empleado_id);
@@ -131,7 +129,7 @@ function rutasEmpleado(ctx) {
 
   router.post(
     '/requests/:id/cancelar',
-    validar({ params: idNumerico, body: motivoOpcional }),
+    validar({ params: esquemas.idNumerico, body: esquemas.motivoOpcional }),
     async (req, res, next) => {
       try {
         await obtenerSolicitudPropia(prisma, Number(req.params.id), req.user.empleado_id);
@@ -161,7 +159,7 @@ function rutasAdmin(ctx) {
   router.get(
     '/requests',
     exigirPermiso('solicitudes:leer_global'),
-    validar({ query: consulta }),
+    validar({ query: esquemas.consulta }),
     async (req, res, next) => {
       try {
         const whereBase = req.query.estado ? { estado: req.query.estado } : {};
@@ -184,7 +182,7 @@ function rutasAdmin(ctx) {
   router.post(
     '/requests/:id/aprobar',
     exigirPermiso('permisos:aprobar'),
-    validar({ params: idNumerico, body: motivoOpcional }),
+    validar({ params: esquemas.idNumerico, body: esquemas.motivoOpcional }),
     async (req, res, next) => {
       try {
         const solicitud = await cambiarEstado({
@@ -206,7 +204,7 @@ function rutasAdmin(ctx) {
   router.post(
     '/requests/:id/rechazar',
     exigirPermiso('permisos:aprobar'),
-    validar({ params: idNumerico, body: motivoRequerido }),
+    validar({ params: esquemas.idNumerico, body: esquemas.motivoRequerido }),
     async (req, res, next) => {
       try {
         const solicitud = await cambiarEstado({
@@ -228,7 +226,7 @@ function rutasAdmin(ctx) {
   router.post(
     '/requests/:id/solicitar-correccion',
     exigirPermiso('permisos:aprobar'),
-    validar({ params: idNumerico, body: motivoRequerido }),
+    validar({ params: esquemas.idNumerico, body: esquemas.motivoRequerido }),
     async (req, res, next) => {
       try {
         const solicitud = await cambiarEstado({
@@ -252,7 +250,7 @@ function rutasAdmin(ctx) {
   router.put(
     '/requests/:id/status',
     exigirPermiso('permisos:aprobar'),
-    validar({ params: idNumerico, body: esquemas.cambiarEstado }),
+    validar({ params: esquemas.idNumerico, body: esquemas.cambiarEstado }),
     async (req, res, next) => {
       try {
         const destino = req.body.estado;

@@ -32,4 +32,16 @@ const crearParametro = z.object({
   vigenciaHasta: fecha.optional(),
 }).refine((datos) => !datos.vigenciaHasta || datos.vigenciaHasta >= datos.vigenciaDesde, { message: 'La vigencia es invalida.', path: ['vigenciaHasta'] });
 
-module.exports = { consulta, crearAjuste, crearParametro, crearPeriodo, idNumerico, motivoOpcional, motivoRequerido };
+// Edicion segura: exige motivo y al menos un campo a modificar.
+const editarParametro = z
+  .object({
+    valor: z.string().trim().min(1).max(200).optional(),
+    descripcion: z.string().trim().max(500).optional(),
+    baseLegal: z.string().trim().max(500).optional(),
+    motivo: z.string().trim().min(10, 'El motivo debe tener al menos 10 caracteres.').max(500),
+  })
+  .refine((d) => Object.keys(d).filter((k) => k !== 'motivo').length > 0, {
+    message: 'Debe enviar al menos un campo a modificar.',
+  });
+
+module.exports = { consulta, crearAjuste, crearParametro, editarParametro, crearPeriodo, idNumerico, motivoOpcional, motivoRequerido };
