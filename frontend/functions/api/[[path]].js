@@ -23,6 +23,9 @@ export async function onRequest(context) {
   const cabeceras = new Headers(request.headers);
   cabeceras.delete('host');
   cabeceras.delete('content-length');
+  // El proxy es same-origin: el origen del navegador no debe llegar al backend
+  // (evita rechazos de CORS y sobrevive a cambios de dominio del frontend).
+  cabeceras.delete('origin');
 
   const tieneCuerpo = !['GET', 'HEAD'].includes(request.method);
   const respuesta = await fetch(destino, {
