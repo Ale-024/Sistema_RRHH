@@ -120,6 +120,24 @@ export default function AdminUsuarios() {
     }
   };
 
+  // Paso final del anexo: ADMIN_TI ejecuta el otorgamiento citando la
+  // autorizacion AUTORIZADA (inv3); sin ese id el backend rechaza.
+  const ejecutarAutorizacion = async (aut) => {
+    setProcesando(`${aut.id}:ejecutar`);
+    try {
+      await api.put(`/admin/usuarios/${aut.beneficiarioId}/roles`, {
+        rolCodigo: aut.rol?.codigo,
+        autorizacionId: aut.id,
+      });
+      notificar('success', `Rol ${aut.rol?.nombre} asignado a ${aut.beneficiario?.email}.`);
+      cargar();
+    } catch (error) {
+      notificar('error', error.response?.data?.message || 'No se pudo ejecutar la asignación.');
+    } finally {
+      setProcesando('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -190,6 +208,14 @@ export default function AdminUsuarios() {
                             <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
                           </button>
                         </div>
+                      ) : a.estado === 'AUTORIZADA' && puedeGestionar ? (
+                        <button
+                          onClick={() => ejecutarAutorizacion(a)}
+                          disabled={Boolean(procesando)}
+                          className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          <UserCog className="w-3.5 h-3.5 mr-1" /> Ejecutar asignación
+                        </button>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}
