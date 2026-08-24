@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const { PERMISOS, ROLES } = require('./catalogo-iam');
+const { sembrarOrganizacion } = require('./catalogo-organizacion');
 const { crearCifrador } = require('../../src/shared/infra/cifrado');
 
 const prisma = new PrismaClient();
@@ -16,11 +17,11 @@ async function sembrarIam() {
     });
   }
 
-  for (const { codigo, nombre, descripcion, permisos } of ROLES) {
+  for (const { codigo, nombre, descripcion, permisos, nivelAutoridad } of ROLES) {
     const rol = await prisma.rol.upsert({
       where: { codigo },
-      update: { nombre, descripcion },
-      create: { codigo, nombre, descripcion },
+      update: { nombre, descripcion, nivelAutoridad },
+      create: { codigo, nombre, descripcion, nivelAutoridad },
     });
     for (const codigoPermiso of permisos) {
       const permiso = await prisma.permisoSistema.findUnique({ where: { codigo: codigoPermiso } });
@@ -73,7 +74,13 @@ async function sembrarParametrosLegales() {
     ['VAC_DIAS_ANIO_4', '20'],
   ];
   for (const [clave, valor] of valores) {
-    const vigente = await prisma.parametroLegal.findFirst({ where: { clave, vigenciaDesde: new Date('2020-01-01T00:00:00.000Z') } });
+    // Los triggers trg_parametro_legal_solapado/update_solapado prohiben dos
+    // filas activas con la misma clave: se actualiza la fila vigente existente
+    // (cualquiera que sea su fecha de inicio) y solo se crea si no hay ninguna.
+    const vigente = await prisma.parametroLegal.findFirst({
+      where: { clave, activo: true },
+      orderBy: { vigenciaDesde: 'asc' },
+    });
     if (vigente) {
       await prisma.parametroLegal.update({ where: { id: vigente.id }, data: { valor, activo: true } });
     } else {
@@ -103,7 +110,6 @@ async function sembrarAdmin() {
     return; // administrador ya sembrado
   }
 
-  const adminRol = await prisma.rol.findUnique({ where: { codigo: 'ADMIN_TI' } });
   const rrhhRol = await prisma.rol.findUnique({ where: { codigo: 'RRHH_SUP' } });
 
   const hashedPassword = await bcrypt.hash('admin123', COSTE_BCRYPT);
@@ -127,9 +133,43 @@ async function sembrarAdmin() {
       },
       roles: {
         create: [
-          { rolId: adminRol.id },
           { rolId: rrhhRol.id, scopeDepartamentoId: depto.id },
         ],
+      },
+    },
+  });
+}
+
+// Cuenta tecnica de administracion de TI (sin datos de negocio).
+// La gestion de usuarios/roles/parametros vive aqui, separada del RRHH.
+async function sembrarCuentaTecnica() {
+  if (await prisma.usuario.findUnique({ where: { email: 'ia@sistemarrhh.com' } })) {
+    return; // cuenta tecnica ya sembrada
+  }
+
+  const adminTiRol = await prisma.rol.findUnique({ where: { codigo: 'ADMIN_TI' } });
+  const puesto = await prisma.puesto.findFirst({ where: { titulo: 'Administrador TI' } });
+
+  const hashedPassword = await bcrypt.hash('Ia#Sistema2026', COSTE_BCRYPT);
+
+  await prisma.usuario.create({
+    data: {
+      email: 'ia@sistemarrhh.com',
+      password_hash: hashedPassword,
+      estado: 'ACTIVO',
+      debeCambiarPassword: true,
+      empleado: {
+        create: {
+          ...(puesto ? { puesto_id: puesto.id } : {}),
+          nombres: 'Asistente',
+          apellidos: 'de Inteligencia Artificial',
+          dni: '99999999A',
+          dni_hmac: cifrador.hmac('99999999A'),
+          fecha_ingreso: new Date(),
+        },
+      },
+      roles: {
+        create: [{ rolId: adminTiRol.id }],
       },
     },
   });
@@ -140,10 +180,14 @@ async function main() {
   await sembrarIam();
   console.log('Sembrando catalogos iniciales (turnos)...');
   await sembrarCatalogos();
+  console.log('Sembrando catalogo organizacional (departamentos y puestos)...');
+  await sembrarOrganizacion(prisma);
   console.log('Sembrando parametros legales de vacaciones...');
   await sembrarParametrosLegales();
   console.log('Sembrando administrador inicial...');
   await sembrarAdmin();
+  console.log('Sembrando cuenta tecnica de TI...');
+  await sembrarCuentaTecnica();
   console.log('Seed completado.');
   console.log('Admin Email: admin@sistemarrhh.com');
   console.log('Admin Password: admin123 (cambiar en produccion)');
