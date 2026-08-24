@@ -5,7 +5,11 @@ const { PrismaClient } = require('@prisma/client');
  * en PostgreSQL (Neon) en produccion; SQLite queda solo como legado de
  * desarrollo. Los PRAGMA son exclusivos de SQLite y deben omitirse en PG.
  */
-const esPostgres = /^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? '');
+function esProveedorPostgres(url = process.env.DATABASE_URL) {
+  return /^postgres(ql)?:\/\//.test(url ?? '');
+}
+
+const esPostgres = esProveedorPostgres();
 
 /**
  * Crea el cliente Prisma. En SQLite aplica los PRAGMA obligatorios:
@@ -33,4 +37,4 @@ async function verificarPragmas(prisma) {
   return { foreignKeys: fk[0]?.foreign_keys === 1, journalMode: wal[0]?.journal_mode };
 }
 
-module.exports = { crearClientePrisma, verificarPragmas, esPostgres };
+module.exports = { crearClientePrisma, verificarPragmas, esPostgres, esProveedorPostgres };

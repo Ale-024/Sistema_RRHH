@@ -24,7 +24,13 @@ async function crearBaseTemporal() {
   const admin = new PrismaClient({ datasources: { db: { url: base } } });
   await admin.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
 
-  const url = `${base}${base.includes('?') ? '&' : '?'}schema=${schema}`;
+  // `?schema=` califica las consultas generadas por Prisma; `options=-c
+  // search_path=` ademas alinea las raw queries y los triggers, que resuelven
+  // nombres sin calificar via search_path (por defecto: public).
+  const url = `${base}&schema=${schema}&options=-c%20search_path%3D${schema}`;
+  // Sincroniza el env: modulos que detectan el proveedor al importarse
+  // (p. ej. reportes) deben ver una URL PostgreSQL durante la prueba.
+  process.env.DATABASE_URL = url;
   execSync('node node_modules/prisma/build/index.js migrate deploy', {
     cwd: path.join(__dirname, '..', '..'),
     env: { ...process.env, DATABASE_URL: url },

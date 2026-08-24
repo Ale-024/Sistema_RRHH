@@ -172,6 +172,20 @@ CREATE INDEX "SolicitudPermiso_solapamiento_idx"
   WHERE "estado" IN ('EN_REVISION', 'APROBADO');
 
 -- ─────────────── VACACIONES (CU04) ───────────────
+-- Escala vacacional inicial (antes vivia en la migracion SQLite de Fase 5).
+INSERT INTO "ParametroLegal" ("clave", "valor", "unidad", "descripcion", "baseLegal", "vigenciaDesde")
+SELECT 'VAC_DIAS_ANIO_1', '10', 'DIAS', 'Vacaciones al cumplir el primer año', 'Codigo de Trabajo, escala vacacional', '2020-01-01T00:00:00'::timestamp
+WHERE NOT EXISTS (SELECT 1 FROM "ParametroLegal" WHERE "clave" = 'VAC_DIAS_ANIO_1' AND "vigenciaDesde" = '2020-01-01T00:00:00'::timestamp);
+INSERT INTO "ParametroLegal" ("clave", "valor", "unidad", "descripcion", "baseLegal", "vigenciaDesde")
+SELECT 'VAC_DIAS_ANIO_2', '12', 'DIAS', 'Vacaciones al cumplir el segundo año', 'Codigo de Trabajo, escala vacacional', '2020-01-01T00:00:00'::timestamp
+WHERE NOT EXISTS (SELECT 1 FROM "ParametroLegal" WHERE "clave" = 'VAC_DIAS_ANIO_2' AND "vigenciaDesde" = '2020-01-01T00:00:00'::timestamp);
+INSERT INTO "ParametroLegal" ("clave", "valor", "unidad", "descripcion", "baseLegal", "vigenciaDesde")
+SELECT 'VAC_DIAS_ANIO_3', '15', 'DIAS', 'Vacaciones al cumplir el tercer año', 'Codigo de Trabajo, escala vacacional', '2020-01-01T00:00:00'::timestamp
+WHERE NOT EXISTS (SELECT 1 FROM "ParametroLegal" WHERE "clave" = 'VAC_DIAS_ANIO_3' AND "vigenciaDesde" = '2020-01-01T00:00:00'::timestamp);
+INSERT INTO "ParametroLegal" ("clave", "valor", "unidad", "descripcion", "baseLegal", "vigenciaDesde")
+SELECT 'VAC_DIAS_ANIO_4', '20', 'DIAS', 'Vacaciones al cumplir cuatro o mas años', 'Codigo de Trabajo, escala vacacional', '2020-01-01T00:00:00'::timestamp
+WHERE NOT EXISTS (SELECT 1 FROM "ParametroLegal" WHERE "clave" = 'VAC_DIAS_ANIO_4' AND "vigenciaDesde" = '2020-01-01T00:00:00'::timestamp);
+
 CREATE OR REPLACE FUNCTION trg_parametro_legal_vigencias_fn() RETURNS trigger AS $$
 BEGIN
   IF NEW."vigenciaHasta" IS NOT NULL AND NEW."vigenciaHasta" < NEW."vigenciaDesde" THEN

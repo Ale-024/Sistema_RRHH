@@ -136,7 +136,7 @@ describe('Fase 2: seguridad y reglas', () => {
     });
     let errorUpdate = null;
     try {
-      await prisma.$executeRawUnsafe(`UPDATE Auditoria SET entidad = 'X'`);
+      await prisma.$executeRawUnsafe(`UPDATE "Auditoria" SET entidad = 'X'`);
     } catch (e) {
       errorUpdate = e;
     }
@@ -144,7 +144,7 @@ describe('Fase 2: seguridad y reglas', () => {
 
     let errorDelete = null;
     try {
-      await prisma.$executeRawUnsafe(`DELETE FROM Auditoria`);
+      await prisma.$executeRawUnsafe(`DELETE FROM "Auditoria"`);
     } catch (e) {
       errorDelete = e;
     }

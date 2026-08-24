@@ -203,7 +203,7 @@ describe('Fase 3: asistencia', () => {
     let errorTrigger = null;
     try {
       await prisma.$executeRawUnsafe(
-        'UPDATE RegistroAsistencia SET estadoDia = ? WHERE id = ?',
+        'UPDATE "RegistroAsistencia" SET "estadoDia" = $1 WHERE "id" = $2',
         'AUSENTE',
         registro.id
       );

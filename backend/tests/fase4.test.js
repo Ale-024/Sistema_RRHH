@@ -225,7 +225,7 @@ describe('Fase 4: permisos', () => {
     });
     let error;
     try {
-      await prisma.$executeRawUnsafe('UPDATE SolicitudPermiso SET estado = ? WHERE id = ?', 'APROBADO', creada.id);
+      await prisma.$executeRawUnsafe('UPDATE "SolicitudPermiso" SET "estado" = $1 WHERE "id" = $2', 'APROBADO', creada.id);
     } catch (cause) {
       error = cause;
     }

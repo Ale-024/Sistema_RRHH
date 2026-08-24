@@ -81,7 +81,7 @@ describe('Anexo de autoridad para otorgar roles', () => {
 
       const rolEnc = await db.prisma.rol.findUnique({ where: { codigo: 'ENCUESTADOR' } });
       await esperarCodigo(
-        db.prisma.$executeRaw`INSERT INTO UsuarioRol ("usuarioId", "rolId", "asignadoPorId") VALUES (${empleado.id}, ${rolEnc.id}, ${empleado.id})`,
+        db.prisma.$executeRaw`INSERT INTO "UsuarioRol" ("usuarioId", "rolId", "asignadoPorId") VALUES (${empleado.id}, ${rolEnc.id}, ${empleado.id})`,
         'INV1_AUTOASIGNACION'
       );
     } finally { await db.limpiar(); }
@@ -105,7 +105,7 @@ describe('Anexo de autoridad para otorgar roles', () => {
       // porque Prisma enmascara los RAISE(ABORT) de triggers como P2003.
       const rolRh = await db.prisma.rol.findUnique({ where: { codigo: 'RRHH_SUP' } });
       await esperarCodigo(
-        db.prisma.$executeRaw`INSERT INTO UsuarioRol ("usuarioId", "rolId", "asignadoPorId") VALUES (${victima.id}, ${rolRh.id}, ${ti.id})`,
+        db.prisma.$executeRaw`INSERT INTO "UsuarioRol" ("usuarioId", "rolId", "asignadoPorId") VALUES (${victima.id}, ${rolRh.id}, ${ti.id})`,
         'INV3_SIN_AUTORIZACION_VIGENTE'
       );
     } finally { await db.limpiar(); }
@@ -198,14 +198,14 @@ describe('Anexo de autoridad para otorgar roles', () => {
 
       // Trigger: supervisor ya tiene RRHH_SUP; agregar DIRECCION aborta (SQL crudo).
       await esperarCodigo(
-        prisma.$executeRaw`INSERT INTO UsuarioRol ("usuarioId", "rolId", "asignadoPorId") VALUES (${sup.id}, ${rolDir.id}, NULL)`,
+        prisma.$executeRaw`INSERT INTO "UsuarioRol" ("usuarioId", "rolId", "asignadoPorId") VALUES (${sup.id}, ${rolDir.id}, NULL)`,
         'INV6_ROLES_INCOMPATIBLES'
       );
 
       const { usuario: ti } = await crearUsuarioConRol(prisma, 'inv6.ti@mkt.hn', 'ADMIN_TI');
       const rolEmp = await prisma.rol.findUnique({ where: { codigo: 'EMPLEADO' } });
       await esperarCodigo(
-        prisma.$executeRaw`INSERT INTO UsuarioRol ("usuarioId", "rolId", "asignadoPorId") VALUES (${ti.id}, ${rolEmp.id}, NULL)`,
+        prisma.$executeRaw`INSERT INTO "UsuarioRol" ("usuarioId", "rolId", "asignadoPorId") VALUES (${ti.id}, ${rolEmp.id}, NULL)`,
         'INV6_ROLES_INCOMPATIBLES'
       );
     } finally { await db.limpiar(); }
@@ -229,7 +229,7 @@ describe('Anexo de autoridad para otorgar roles', () => {
 
       // Trigger (SQL crudo).
       await esperarCodigo(
-        prisma.$executeRaw`DELETE FROM UsuarioRol WHERE "usuarioId" = ${tiA.id} AND "rolId" = ${rol.id}`,
+        prisma.$executeRaw`DELETE FROM "UsuarioRol" WHERE "usuarioId" = ${tiA.id} AND "rolId" = ${rol.id}`,
         'INV7_ULTIMO_ADMINISTRADOR'
       );
     } finally { await db.limpiar(); }
