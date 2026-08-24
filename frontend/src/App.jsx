@@ -5,7 +5,6 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import EmployeeProfile from './pages/EmployeeProfile';
 import EmployeeRequests from './pages/EmployeeRequests';
 import EmployeeAttendance from './pages/EmployeeAttendance';
-import EmployeeNotifications from './pages/EmployeeNotifications';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminEmployees from './pages/AdminEmployees';
 import AdminAttendance from './pages/AdminAttendance';

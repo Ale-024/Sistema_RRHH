@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+
+# Entorno y secretos
+.env
+.env.local
+.env.*.local
+
+# Bases de datos SQLite y respaldos
+*.db
+*.db-wal
+*.db-shm
+backups/
+
+# Archivos subidos por usuarios
+uploads/
+storage/
+
+# Construcción
+dist/
+build/
+coverage/
+
+# Registros
+logs/
+*.log
+npm-debug.log*
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Documentación técnica local (no se publica)
+SIRH-MKT*.md

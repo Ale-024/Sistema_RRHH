@@ -6,8 +6,7 @@ import {
   LayoutDashboard, 
   Users, 
   CalendarClock, 
-  FileText, 
-  Receipt,
+  FileText,
   User,
   LogOut,
   Menu,
@@ -40,7 +39,6 @@ export default function Layout() {
     { name: 'Mi Perfil', path: '/employee/profile', icon: User },
     { name: 'Asistencia', path: '/employee/attendance', icon: CalendarClock },
     { name: 'Mis Solicitudes', path: '/employee/requests', icon: FileText },
-    { name: 'Mis Recibos', path: '/employee/payroll', icon: Receipt },
   ];
 
   const links = user?.rol === 'ADMIN' ? adminLinks : employeeLinks;
