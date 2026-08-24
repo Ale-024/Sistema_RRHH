@@ -17,25 +17,45 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, 
   const finDia = new Date(inicioDia);
   finDia.setDate(finDia.getDate() + 1);
 
-  // Ultima salida y ultima entrada del dia para decidir el tipo.
-  const ultimaSalida = await prisma.marcaje.findFirst({
-    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia }, tipo: 'SALIDA' },
-    orderBy: { ocurridoEn: 'desc' },
+  // Un dia cerrado es inmutable: ni marcajes ni recalculos. Correcciones
+  // posteriores pasan por RRHH (reabrir dia -> corregir -> cerrar).
+  const registroDelDia = await prisma.registroAsistencia.findUnique({
+    where: { empleadoId_fecha: { empleadoId, fecha: inicioDia } },
+    select: { cerrado: true },
   });
-  const ultimaEntrada = ultimaSalida
-    ? null
-    : await prisma.marcaje.findFirst({
-        where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia }, tipo: 'ENTRADA' },
-        orderBy: { ocurridoEn: 'desc' },
-      });
+  if (registroDelDia?.cerrado) {
+    throw new ErrorAplicacion(
+      'DIA_CERRADO',
+      409,
+      'El dia ya fue cerrado. Solicita a RRHH una correccion de asistencia.'
+    );
+  }
+
+  // Tipo derivado del ORDEN real de eventos: si la ultima marca es una
+  // entrada sin salida posterior, corresponde SALIDA; en otro caso,
+  // ENTRADA (incluye iniciar un nuevo ciclo tras una salida).
+  const marcajesHoy = await prisma.marcaje.findMany({
+    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia } },
+    orderBy: { ocurridoEn: 'asc' },
+    select: { tipo: true, ocurridoEn: true },
+  });
+  const ultimaEntrada = [...marcajesHoy].reverse().find((m) => m.tipo === 'ENTRADA');
+  const haySalidaDespues =
+    ultimaEntrada &&
+    marcajesHoy.some((m) => m.tipo === 'SALIDA' && m.ocurridoEn > ultimaEntrada.ocurridoEn);
 
   // Antirrepeticion inmediata (doble toque accidental). Configurable
-  // por entorno; en pruebas se fija en 0.
+  // por entorno; en pruebas se fija en 0. Aplica al ULTIMO marcaje de
+  // cualquier tipo: tambien evita duplicados tras completar un ciclo.
   const segundosAntirrepeticion = Number(ctx.entorno?.SEGUNDOS_ANTIRREPETICION ?? 60);
+  const ultimoMarcaje = await prisma.marcaje.findFirst({
+    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia } },
+    orderBy: { ocurridoEn: 'desc' },
+  });
   if (
     segundosAntirrepeticion > 0 &&
-    ultimaEntrada &&
-    ultimaEntrada.ocurridoEn > new Date(ahora - segundosAntirrepeticion * 1000)
+    ultimoMarcaje &&
+    ultimoMarcaje.ocurridoEn > new Date(ahora - segundosAntirrepeticion * 1000)
   ) {
     throw new ErrorAplicacion(
       'MARCAJE_REPETIDO',
@@ -44,7 +64,7 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, 
     );
   }
 
-  const tipo = ultimaEntrada ? 'SALIDA' : 'ENTRADA';
+  const tipo = ultimaEntrada && !haySalidaDespues ? 'SALIDA' : 'ENTRADA';
 
   try {
     const marcaje = await prisma.marcaje.create({
