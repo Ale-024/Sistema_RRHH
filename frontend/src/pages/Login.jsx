@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, User, Lock, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { esRolAdministrativo } from '../shared/roles';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -20,13 +21,14 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { email, password });
       login(res.data.user, res.data.token);
-      
-      // Redirect based on role
-      if (res.data.user.rol === 'ADMIN') {
-        navigate('/admin');
-      } else {
-        navigate('/employee');
+
+      if (res.data.user.debeCambiarPassword) {
+        navigate('/employee/profile', {
+          state: { avisoCambioPassword: true },
+        });
+        return;
       }
+      navigate(esRolAdministrativo(res.data.user) ? '/admin' : '/employee');
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
     } finally {

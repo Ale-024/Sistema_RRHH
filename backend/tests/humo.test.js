@@ -15,6 +15,7 @@ function appDePrueba() {
     clock: reloj,
     entorno: {
       PORT: 0,
+      CLAVE_CIFRADO: Buffer.alloc(32, 7).toString('base64'),
       origenesPermitidos: ['http://localhost:5173'],
     },
   });

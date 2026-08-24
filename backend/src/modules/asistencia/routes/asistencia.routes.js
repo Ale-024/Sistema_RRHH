@@ -2,6 +2,10 @@ const express = require('express');
 const { registrarMarcaje } = require('../application/registrar-marcaje.usecase');
 const { consultaAsistencia } = require('./esquemas');
 const validar = require('../../../shared/http/validar');
+const { exigirPermiso } = require('../../../shared/http/autorizacion');
+const {
+  aplicarAlcanceRelacion,
+} = require('../../../shared/dominio/alcance');
 
 /**
  * Rutas del modulo asistencia.
@@ -54,18 +58,34 @@ function rutasAdmin(ctx) {
   const { prisma } = ctx;
   const router = express.Router();
 
-  router.get('/attendance', async (_req, res, next) => {
-    try {
-      res.json(
-        await prisma.asistencia.findMany({
-          include: { empleado: true },
-          orderBy: { fecha_hora_entrada: 'desc' },
-        })
-      );
-    } catch (error) {
-      next(error);
+  router.get(
+    '/attendance',
+    exigirPermiso('asistencia:leer_global'),
+    validar({ query: consultaAsistencia }),
+    async (req, res, next) => {
+      try {
+        const { desde, hasta } = req.query;
+        res.json(
+          await prisma.asistencia.findMany({
+            where: aplicarAlcanceRelacion('empleado', {
+              ...(desde || hasta
+                ? {
+                    fecha_hora_entrada: {
+                      ...(desde ? { gte: desde } : {}),
+                      ...(hasta ? { lte: hasta } : {}),
+                    },
+                  }
+                : {}),
+            }, req.contexto),
+            include: { empleado: { include: { puesto: { include: { departamento: true } } } } },
+            orderBy: { fecha_hora_entrada: 'desc' },
+          })
+        );
+      } catch (error) {
+        next(error);
+      }
     }
-  });
+  );
 
   return router;
 }

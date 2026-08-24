@@ -5,6 +5,10 @@ const {
   idNumerico,
 } = require('./esquemas');
 const validar = require('../../../shared/http/validar');
+const { exigirPermiso } = require('../../../shared/http/autorizacion');
+const {
+  aplicarAlcanceRelacion,
+} = require('../../../shared/dominio/alcance');
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
 
 /**
@@ -56,21 +60,27 @@ function rutasAdmin(ctx) {
   const { prisma } = ctx;
   const router = express.Router();
 
-  router.get('/requests', async (_req, res, next) => {
-    try {
-      res.json(
-        await prisma.solicitud.findMany({
-          include: { empleado: true },
-          orderBy: { fecha_solicitud: 'desc' },
-        })
-      );
-    } catch (error) {
-      next(error);
+  router.get(
+    '/requests',
+    exigirPermiso('solicitudes:leer_global'),
+    async (req, res, next) => {
+      try {
+        res.json(
+          await prisma.solicitud.findMany({
+            where: aplicarAlcanceRelacion('empleado', {}, req.contexto),
+            include: { empleado: { include: { puesto: { include: { departamento: true } } } } },
+            orderBy: { fecha_solicitud: 'desc' },
+          })
+        );
+      } catch (error) {
+        next(error);
+      }
     }
-  });
+  );
 
   router.put(
     '/requests/:id/status',
+    exigirPermiso('solicitudes:revisar'),
     validar({ params: idNumerico, body: cambiarEstado }),
     async (req, res, next) => {
       try {

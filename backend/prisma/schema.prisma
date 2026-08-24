@@ -7,20 +7,93 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ════════════════════════════ IAM ════════════════════════════
+
 model Usuario {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  password_hash String
-  rol           String    // "ADMIN" | "EMPLOYEE"
-  activo        Boolean   @default(true)
-  empleado      Empleado?
+  id                  Int       @id @default(autoincrement())
+  email               String    @unique
+  password_hash       String
+  estado              String    @default("ACTIVO") // ACTIVO | BLOQUEADO | INACTIVO
+  intentosFallidos    Int       @default(0)
+  bloqueadoHasta      DateTime?
+  debeCambiarPassword Boolean   @default(false)
+  ultimoAcceso        DateTime?
+  mfaSecret           String?
+  creadoEn            DateTime  @default(now())
+  actualizadoEn       DateTime  @updatedAt
+
+  empleado Empleado?
+  roles    UsuarioRol[]
+  sesiones SesionRefresh[]
+
+  @@index([estado])
 }
+
+model Rol {
+  id          Int     @id @default(autoincrement())
+  codigo      String  @unique // EMPLEADO | ENCUESTADOR | RRHH_SUP | GERENTE_DEPTO | DIRECCION | ADMIN_TI
+  nombre      String
+  descripcion String?
+  permisos    RolPermiso[]
+  usuarios    UsuarioRol[]
+}
+
+model PermisoSistema {
+  id          Int    @id @default(autoincrement())
+  codigo      String @unique // empleados:leer, planilla:cerrar, auditoria:leer ...
+  descripcion String?
+  roles       RolPermiso[]
+}
+
+model RolPermiso {
+  rolId     Int
+  permisoId Int
+  rol       Rol            @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   PermisoSistema @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+}
+
+/// scopeDepartamentoId implementa el alcance ABAC que en Postgres
+/// resolvía Row Level Security (ver plan, seccion 11.3).
+model UsuarioRol {
+  usuarioId            Int
+  rolId                Int
+  scopeDepartamentoId  Int?
+  asignadoEn           DateTime @default(now())
+  usuario         Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol             Rol          @relation(fields: [rolId], references: [id])
+  scopeDepartamento Departamento? @relation(fields: [scopeDepartamentoId], references: [id])
+
+  @@id([usuarioId, rolId])
+}
+
+/// Refresh tokens rotativos con deteccion de reuso.
+model SesionRefresh {
+  id          String    @id @default(uuid())
+  usuarioId   Int
+  tokenHash   String    @unique
+  familiaId   String
+  expiraEn    DateTime
+  revocadoEn  DateTime?
+  motivoRevoca String?
+  ip          String?
+  userAgent   String?
+  creadoEn    DateTime  @default(now())
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revocadoEn])
+  @@index([familiaId])
+}
+
+// ═══════════════════════ ORGANIZACIÓN ═══════════════════════
 
 model Departamento {
   id          Int       @id @default(autoincrement())
   nombre      String
   descripcion String?
   puestos     Puesto[]
+  scopes      UsuarioRol[]
 }
 
 model Puesto {
@@ -31,6 +104,8 @@ model Puesto {
   empleados       Empleado[]
 }
 
+// ════════════════════════ EMPLEADOS ════════════════════════
+
 model Empleado {
   id                  Int       @id @default(autoincrement())
   usuario_id          Int       @unique
@@ -40,17 +115,82 @@ model Empleado {
   nombres             String
   apellidos           String
   dni                 String    @unique
+  dni_hmac            String?   @unique /// HMAC para busqueda exacta sin descifrar
   fecha_ingreso       DateTime
   telefono            String?
   direccion           String?
   contacto_emergencia String?
   telefono_emergencia String?
-  
-  asistencias         Asistencia[]
-  solicitudes         Solicitud[]
-  nominas             Nomina[]
-  notificaciones      Notificacion[]
+  rtn                 String?
+  fecha_nacimiento    DateTime?
+  sexo                String? // M | F | O
+  numero_ihss_cif     String? /// AES-256-GCM
+  numero_rap_cif      String? /// AES-256-GCM
+  banco               String?
+  cuenta_bancaria_cif String? /// AES-256-GCM
+  jefe_id             Int?
+  estadoLaboral       String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | VACACIONES | INACTIVO
+  causaSalida         String?
+
+  asistencias    Asistencia[]
+  solicitudes    Solicitud[]
+  nominas        Nomina[]
+  notificaciones Notificacion[]
+  contratos      Contrato[]
+  historial      HistorialLaboral[]
+  documentos     DocumentoEmpleado[]
+
+  @@index([estadoLaboral])
 }
+
+model Contrato {
+  id              Int       @id @default(autoincrement())
+  empleado_id     Int
+  empleado        Empleado  @relation(fields: [empleado_id], references: [id], onDelete: Restrict)
+  modalidad       String // PERMANENTE | POR_PROYECTO | POR_DIA | POR_HORA
+  salarioBaseCent Int /// importes en centavos; prohibido Float
+  moneda          String    @default("HNL")
+  periodicidad    String // MENSUAL | QUINCENAL | SEMANAL | POR_JORNADA
+  aplicaIhss      Boolean   @default(true)
+  aplicaRap       Boolean   @default(true)
+  vigenciaDesde   DateTime
+  vigenciaHasta   DateTime?
+  documentoRuta   String?
+  creadoEn        DateTime  @default(now())
+
+  @@index([empleado_id, vigenciaDesde])
+}
+
+model HistorialLaboral {
+  id            Int      @id @default(autoincrement())
+  empleado_id   Int
+  tipo          String // CAMBIO_PUESTO | AJUSTE_SALARIO | CAMBIO_ESTADO | CAMBIO_DEPTO | CONTRATACION
+  valorAnterior String?
+  valorNuevo    String
+  motivo        String?
+  autorizadoPor Int?
+  registradoEn  DateTime @default(now())
+  empleado Empleado @relation(fields: [empleado_id], references: [id])
+
+  @@index([empleado_id, registradoEn])
+}
+
+model DocumentoEmpleado {
+  id          Int      @id @default(autoincrement())
+  empleado_id Int
+  tipo        String // CONTRATO | DNI | TITULO | CONSTANCIA | AMONESTACION
+  nombre      String
+  ruta        String /// ruta relativa dentro del almacen local
+  mime        String
+  tamanoBytes Int
+  subidoPor   Int
+  subidoEn    DateTime @default(now())
+  empleado Empleado @relation(fields: [empleado_id], references: [id])
+
+  @@index([empleado_id, tipo])
+}
+
+// ════════════════════════ ASISTENCIA ════════════════════════
 
 model Asistencia {
   id                 Int      @id @default(autoincrement())
@@ -58,20 +198,28 @@ model Asistencia {
   empleado           Empleado @relation(fields: [empleado_id], references: [id])
   fecha_hora_entrada DateTime
   fecha_hora_salida  DateTime?
-  estado             String   // "PRESENTE" | "RETARDO" | "FALTA"
+  estado             String // "PRESENTE" | "RETARDO" | "FALTA"
+
+  @@index([fecha_hora_entrada])
 }
+
+// ═════════════════════════ PERMISOS ═════════════════════════
 
 model Solicitud {
   id              Int      @id @default(autoincrement())
   empleado_id     Int
   empleado        Empleado @relation(fields: [empleado_id], references: [id])
-  tipo            String   // "VACACIONES" | "PERMISO"
+  tipo            String // "VACACIONES" | "PERMISO"
   fecha_solicitud DateTime @default(now())
   fecha_inicio    DateTime
   fecha_fin       DateTime
   motivo          String
   estado          String   @default("PENDIENTE") // "PENDIENTE" | "APROBADA" | "RECHAZADA"
+
+  @@index([empleado_id, estado])
 }
+
+// ═════════════════════════ PLANILLA ═════════════════════════
 
 model Nomina {
   id             Int      @id @default(autoincrement())
@@ -85,6 +233,8 @@ model Nomina {
   salario_neto   Decimal
 }
 
+// ═════════════════ NOTIFICACIONES Y AUDITORÍA ═════════════════
+
 model Notificacion {
   id             Int      @id @default(autoincrement())
   empleado_id    Int
@@ -92,4 +242,24 @@ model Notificacion {
   mensaje        String
   leida          Boolean  @default(false)
   fecha_creacion DateTime @default(now())
+
+  @@index([empleado_id, leida])
+}
+
+/// Append-only por trigger. Retencion minima cinco anos.
+model Auditoria {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int?
+  entidad    String
+  entidadId  Int?
+  accion     String // CREAR | ACTUALIZAR | DESACTIVAR | DESVINCULAR | LOGIN | LOGIN_FALLIDO | ASIGNAR_ROL ...
+  antes      String? /// JSON con campos sensibles enmascarados
+  despues    String?
+  ip         String?
+  userAgent  String?
+  requestId  String?
+  ocurridoEn DateTime @default(now())
+
+  @@index([entidad, entidadId])
+  @@index([usuarioId, ocurridoEn])
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 const { crearNomina, actualizarNomina, idNumerico } = require('./esquemas');
 const validar = require('../../../shared/http/validar');
+const { exigirPermiso } = require('../../../shared/http/autorizacion');
 
 /**
  * Rutas del modulo planilla (modelo Nomina del MVP).
@@ -31,20 +32,28 @@ function rutasAdmin(ctx) {
   const { prisma } = ctx;
   const router = express.Router();
 
-  router.get('/payroll', async (_req, res, next) => {
-    try {
-      res.json(
-        await prisma.nomina.findMany({
-          include: { empleado: true },
-          orderBy: { periodo_inicio: 'desc' },
-        })
-      );
-    } catch (error) {
-      next(error);
+  router.get(
+    '/payroll',
+    exigirPermiso('planilla:leer_global'),
+    async (_req, res, next) => {
+      try {
+        res.json(
+          await prisma.nomina.findMany({
+            include: { empleado: true },
+            orderBy: { periodo_inicio: 'desc' },
+          })
+        );
+      } catch (error) {
+        next(error);
+      }
     }
-  });
+  );
 
-  router.post('/payroll', validar({ body: crearNomina }), async (req, res, next) => {
+  router.post(
+    '/payroll',
+    exigirPermiso('planilla:administrar'),
+    validar({ body: crearNomina }),
+    async (req, res, next) => {
     try {
       const neto = req.body.salario_bruto - req.body.deducciones;
       res.json(
@@ -59,6 +68,7 @@ function rutasAdmin(ctx) {
 
   router.put(
     '/payroll/:id',
+    exigirPermiso('planilla:administrar'),
     validar({ params: idNumerico, body: actualizarNomina }),
     async (req, res, next) => {
       try {
@@ -86,6 +96,7 @@ function rutasAdmin(ctx) {
 
   router.delete(
     '/payroll/:id',
+    exigirPermiso('planilla:administrar'),
     validar({ params: idNumerico }),
     async (req, res, next) => {
       try {

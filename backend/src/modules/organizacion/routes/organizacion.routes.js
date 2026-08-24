@@ -1,10 +1,12 @@
 const express = require('express');
 const { crearDepartamento, crearPuesto } = require('./esquemas');
 const validar = require('../../../shared/http/validar');
+const { exigirPermiso } = require('../../../shared/http/autorizacion');
 
 /**
  * Rutas de administracion del modulo organizacion (catalogos).
  * Se montan bajo /api/admin conservando el contrato del MVP.
+ * La escritura exige organizacion:administrar.
  */
 function rutasAdminOrganizacion(ctx) {
   const { prisma } = ctx;
@@ -20,6 +22,7 @@ function rutasAdminOrganizacion(ctx) {
 
   router.post(
     '/departments',
+    exigirPermiso('organizacion:administrar'),
     validar({ body: crearDepartamento }),
     async (req, res, next) => {
       try {
@@ -40,13 +43,18 @@ function rutasAdminOrganizacion(ctx) {
     }
   });
 
-  router.post('/positions', validar({ body: crearPuesto }), async (req, res, next) => {
-    try {
-      res.json(await prisma.puesto.create({ data: req.body }));
-    } catch (error) {
-      next(error);
+  router.post(
+    '/positions',
+    exigirPermiso('organizacion:administrar'),
+    validar({ body: crearPuesto }),
+    async (req, res, next) => {
+      try {
+        res.json(await prisma.puesto.create({ data: req.body }));
+      } catch (error) {
+        next(error);
+      }
     }
-  });
+  );
 
   return router;
 }

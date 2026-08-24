@@ -7,6 +7,8 @@ import {
   Users, 
   CalendarClock, 
   FileText,
+  Receipt,
+  Shield,
   User,
   LogOut,
   Menu,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react';
 import NotificationsMenu from './NotificationsMenu';
 import ThemeToggle from './ThemeToggle';
+import { esRolAdministrativo, tienePermiso, ETIQUETAS_ROL } from '../shared/roles';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -28,11 +31,12 @@ export default function Layout() {
 
   const adminLinks = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { name: 'Empleados', path: '/admin/employees', icon: Users },
-    { name: 'Asistencia', path: '/admin/attendance', icon: CalendarClock },
-    { name: 'Solicitudes', path: '/admin/requests', icon: FileText },
-    { name: 'Nómina', path: '/admin/payroll', icon: Receipt },
-  ];
+    { name: 'Empleados', path: '/admin/employees', icon: Users, permiso: 'empleados:leer' },
+    { name: 'Asistencia', path: '/admin/attendance', icon: CalendarClock, permiso: 'asistencia:leer_global' },
+    { name: 'Solicitudes', path: '/admin/requests', icon: FileText, permiso: 'solicitudes:revisar' },
+    { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permiso: 'planilla:leer_global' },
+    { name: 'Usuarios', path: '/admin/usuarios', icon: Shield, permiso: 'usuarios:administrar' },
+  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
   const employeeLinks = [
     { name: 'Dashboard', path: '/employee', icon: LayoutDashboard },
@@ -41,7 +45,7 @@ export default function Layout() {
     { name: 'Mis Solicitudes', path: '/employee/requests', icon: FileText },
   ];
 
-  const links = user?.rol === 'ADMIN' ? adminLinks : employeeLinks;
+  const links = esRolAdministrativo(user) ? adminLinks : employeeLinks;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex transition-colors">
@@ -76,7 +80,7 @@ export default function Layout() {
             </div>
             <div>
               <p className="text-sm font-medium text-white">{user?.nombres} {user?.apellidos}</p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">{user?.rol}</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">{ETIQUETAS_ROL[user?.rol] || user?.rol}</p>
             </div>
           </div>
         </div>

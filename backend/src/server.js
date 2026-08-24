@@ -16,7 +16,12 @@ async function main() {
   }
 
   const prisma = await crearClientePrisma();
-  const ctx = { prisma, bus: new BusEventos(), clock: reloj, entorno };
+  const ctx = {
+    prisma,
+    bus: new BusEventos(),
+    clock: reloj,
+    entorno,
+  };
 
   const app = crearApp(ctx);
   const server = app.listen(entorno.PORT, () => {

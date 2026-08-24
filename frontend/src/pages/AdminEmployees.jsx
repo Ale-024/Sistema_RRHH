@@ -13,7 +13,8 @@ export default function AdminEmployees() {
   const [formData, setFormData] = useState({
     email: '', password: '', nombres: '', apellidos: '',
     dni: '', telefono: '', direccion: '',
-    puesto_id: '', fecha_ingreso: '', salario: ''
+    puesto_id: '', fecha_ingreso: '', salario: '',
+    modalidad: 'PERMANENTE', periodicidad: 'MENSUAL'
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -52,7 +53,8 @@ export default function AdminEmployees() {
     setFormData({
       email: '', password: '', nombres: '', apellidos: '',
       dni: '', telefono: '', direccion: '',
-      puesto_id: '', fecha_ingreso: '', salario: ''
+      puesto_id: '', fecha_ingreso: '', salario: '',
+      modalidad: 'PERMANENTE', periodicidad: 'MENSUAL'
     });
     setEditingEmployee(null);
   };
@@ -83,17 +85,28 @@ export default function AdminEmployees() {
     e.preventDefault();
     setMessage({ type: '', text: '' });
     try {
-      const payload = {
-        ...formData,
+      const base = {
+        email: formData.email,
+        nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        telefono: formData.telefono || undefined,
+        direccion: formData.direccion || undefined,
         puesto_id: Number(formData.puesto_id),
-        salario: Number(formData.salario)
       };
       if (editingEmployee) {
-        await api.put(`/admin/employees/${editingEmployee.id}`, payload);
+        await api.put(`/admin/employees/${editingEmployee.id}`, base);
         setMessage({ type: 'success', text: 'Empleado actualizado exitosamente' });
       } else {
-        await api.post('/admin/employees', payload);
-        setMessage({ type: 'success', text: 'Empleado creado exitosamente' });
+        await api.post('/admin/employees', {
+          ...base,
+          password: formData.password,
+          dni: formData.dni,
+          fecha_ingreso: formData.fecha_ingreso,
+          salario: Number(formData.salario),
+          modalidad: formData.modalidad,
+          periodicidad: formData.periodicidad,
+        });
+        setMessage({ type: 'success', text: 'Empleado creado exitosamente. La contraseña temporal debe entregarse por un canal seguro (ya no se envía por notificación).' });
       }
       setShowModal(false);
       resetForm();
@@ -104,8 +117,9 @@ export default function AdminEmployees() {
   };
 
   const toggleActive = async (emp) => {
+    const esActivo = emp.usuario?.estado === 'ACTIVO';
     try {
-      await api.put(`/admin/employees/${emp.id}`, { activo: !emp.usuario?.activo });
+      await api.put(`/admin/employees/${emp.id}`, { activo: !esActivo });
       fetchEmployees();
     } catch (error) {
       alert('Error al cambiar estado');
@@ -174,7 +188,7 @@ export default function AdminEmployees() {
                     <td className="px-6 py-4">{emp.puesto?.titulo || '—'}</td>
                     <td className="px-6 py-4">{emp.puesto?.departamento?.nombre || '—'}</td>
                     <td className="px-6 py-4">
-                      {emp.usuario?.activo
+                      {emp.usuario?.estado === 'ACTIVO'
                         ? <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Activo</span>
                         : <span className="bg-red-100 text-red-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Inactivo</span>
                       }
@@ -183,8 +197,8 @@ export default function AdminEmployees() {
                       <button onClick={() => openEditModal(emp)} className="inline-flex items-center p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => toggleActive(emp)} className={`inline-flex items-center p-1.5 rounded-lg transition-colors ${emp.usuario?.activo ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'}`} title={emp.usuario?.activo ? 'Desactivar' : 'Activar'}>
-                        {emp.usuario?.activo ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      <button onClick={() => toggleActive(emp)} className={`inline-flex items-center p-1.5 rounded-lg transition-colors ${emp.usuario?.estado === 'ACTIVO' ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'}`} title={emp.usuario?.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}>
+                        {emp.usuario?.estado === 'ACTIVO' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                       </button>
                     </td>
                   </tr>
@@ -252,10 +266,32 @@ export default function AdminEmployees() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Salario</label>
-                  <input type="number" step="0.01" required value={formData.salario} onChange={(e) => setFormData({...formData, salario: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Salario (L)</label>
+                  <input type="number" step="0.01" required={!editingEmployee} value={formData.salario} onChange={(e) => setFormData({...formData, salario: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" />
                 </div>
               </div>
+              {!editingEmployee && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Modalidad de contrato</label>
+                    <select value={formData.modalidad} onChange={(e) => setFormData({...formData, modalidad: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg">
+                      <option value="PERMANENTE">Permanente (planta)</option>
+                      <option value="POR_PROYECTO">Por proyecto</option>
+                      <option value="POR_DIA">Por día</option>
+                      <option value="POR_HORA">Por hora</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Periodicidad de pago</label>
+                    <select value={formData.periodicidad} onChange={(e) => setFormData({...formData, periodicidad: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg">
+                      <option value="MENSUAL">Mensual</option>
+                      <option value="QUINCENAL">Quincenal</option>
+                      <option value="SEMANAL">Semanal</option>
+                      <option value="POR_JORNADA">Por jornada</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Ingreso</label>
                 <input type="date" required value={formData.fecha_ingreso} onChange={(e) => setFormData({...formData, fecha_ingreso: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" />

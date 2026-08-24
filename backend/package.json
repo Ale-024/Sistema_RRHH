@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.js\"",
     "arch": "depcruise src",
+    "seed": "node prisma/seeds/index.js",
     "test": "vitest run"
   },
   "keywords": [],
@@ -18,6 +19,7 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
