@@ -69,12 +69,16 @@ function tituloPorCodigo(codigo) {
     LINEA_PLANILLA_INMUTABLE: 'Linea de planilla inmutable',
     DESCUADRE_DETALLE_PLANILLA: 'Descuadre de planilla',
     PLANILLA_TRANSICION_INVALIDA: 'Transicion de planilla invalida',
+    MFA_REQUERIDO: 'Segundo factor requerido',
+    MFA_INVALIDO: 'Codigo MFA invalido',
+    MFA_NO_APLICA: 'MFA no aplica a este perfil',
   };
   return titulos[codigo] ?? 'Solicitud rechazada';
 }
 
 function manejadorErrores(err, req, res, _next) {
   const problema = mapear(err);
+  if (problema.status >= 400 && req.app?.locals?.metrics) req.app.locals.metrics.errores += 1;
   if (problema.status >= 500) {
     console.error('[error]', { requestId: req.contexto?.requestId, err });
   }

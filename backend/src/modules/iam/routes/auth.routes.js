@@ -4,11 +4,14 @@ const { iniciarSesion } = require('../application/iniciar-sesion.usecase');
 const { refrescarSesion, cerrarSesion } = require('../application/sesiones.usecase');
 const { cambiarPassword } = require('../application/cambiar-password.usecase');
 const { verificarToken } = require('../application/autenticacion');
+const { crearSecretoTotp, verificarCodigoTotp, usuarioRequiereMfa, uriTotp } = require('../application/mfa');
+const { ErrorAplicacion } = require('../../../shared/dominio/errores');
 const validar = require('../../../shared/http/validar');
 
 const esquemaLogin = z.object({
   email: z.string().trim().min(1).email('Debe ser un correo valido'),
   password: z.string().min(1, 'La contrasena es obligatoria'),
+  otp: z.string().regex(/^\d{6}$/).optional(),
 });
 
 const esquemaPassword = z.object({
@@ -88,6 +91,26 @@ function rutasAuth(ctx) {
       }
     }
   );
+
+  router.post('/mfa/setup', verificarToken, async (req, res, next) => {
+    try {
+      const usuario = await ctx.prisma.usuario.findUnique({ where: { id: req.user.id }, include: { roles: { include: { rol: true } } } });
+      if (!usuario || !usuarioRequiereMfa(usuario)) throw new ErrorAplicacion('MFA_NO_APLICA', 403, 'El segundo factor no aplica a este perfil.');
+      const secreto = crearSecretoTotp();
+      await ctx.prisma.usuario.update({ where: { id: usuario.id }, data: { mfaSecret: `PENDING:${secreto}` } });
+      res.json({ secret: secreto, otpauth: uriTotp(secreto, usuario.email), mensaje: 'Confirme el codigo de su aplicacion autenticadora.' });
+    } catch (error) { next(error); }
+  });
+
+  router.post('/mfa/verify', verificarToken, validar({ body: z.object({ code: z.string().regex(/^\d{6}$/) }) }), async (req, res, next) => {
+    try {
+      const usuario = await ctx.prisma.usuario.findUnique({ where: { id: req.user.id } });
+      const secreto = usuario?.mfaSecret?.startsWith('PENDING:') ? usuario.mfaSecret.slice(8) : null;
+      if (!secreto || !verificarCodigoTotp(secreto, req.body.code)) throw new ErrorAplicacion('MFA_INVALIDO', 401, 'El codigo TOTP no es valido.');
+      await ctx.prisma.usuario.update({ where: { id: usuario.id }, data: { mfaSecret: secreto } });
+      res.json({ message: 'MFA activado correctamente.' });
+    } catch (error) { next(error); }
+  });
 
   return router;
 }

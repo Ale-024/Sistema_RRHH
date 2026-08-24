@@ -80,6 +80,10 @@ async function crearBaseTemporal() {
     'parametros:administrar',
     'usuarios:administrar',
     'auditoria:leer',
+    'reportes:ver',
+    'reportes:ver_global',
+    'reportes:administrar',
+    'observabilidad:leer',
   ];
   for (const codigo of PERMISOS) {
     await prisma.permisoSistema.create({ data: { codigo } });
@@ -93,11 +97,11 @@ async function crearBaseTemporal() {
       'empleados:actualizar', 'empleados:desvincular', 'contratos:crear',
       'organizacion:administrar', 'asistencia:leer_global',
       'asistencia:importar', 'asistencia:corregir', 'asistencia:cerrar',
-      'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar',
+      'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar', 'reportes:ver', 'reportes:administrar',
     ],
-    GERENTE_DEPTO: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar'],
-    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'auditoria:leer'],
-    ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer'],
+    GERENTE_DEPTO: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'reportes:ver'],
+    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'auditoria:leer', 'reportes:ver_global'],
+    ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],
   };
 
   for (const [codigoRol, lista] of Object.entries(MATRIZ)) {

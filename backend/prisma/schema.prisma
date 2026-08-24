@@ -89,11 +89,13 @@ model SesionRefresh {
 // ═══════════════════════ ORGANIZACIÓN ═══════════════════════
 
 model Departamento {
-  id          Int          @id @default(autoincrement())
+  id          Int                       @id @default(autoincrement())
   nombre      String
   descripcion String?
   puestos     Puesto[]
   scopes      UsuarioRol[]
+  proyectos   Proyecto[]
+  costos      ProyeccionCostoPlanilla[]
 }
 
 model Puesto {
@@ -139,13 +141,15 @@ model Empleado {
   solicitudesPermiso     SolicitudPermiso[]
   periodosVacacionales   PeriodoVacacional[]
   solicitudesVacacion    SolicitudVacacion[]
-  vacacionesComoSuplente SolicitudVacacion[]  @relation("EmpleadoSuplencias")
+  vacacionesComoSuplente SolicitudVacacion[]           @relation("EmpleadoSuplencias")
   nominas                Nomina[]
   notificaciones         Notificacion[]
   contratos              Contrato[]
   historial              HistorialLaboral[]
   documentos             DocumentoEmpleado[]
   detallesPlanilla       DetallePlanilla[]
+  proyectos              AsignacionProyecto[]
+  proyeccionesAsistencia ProyeccionAsistenciaMensual[]
 
   @@index([estadoLaboral])
 }
@@ -166,6 +170,39 @@ model Contrato {
   creadoEn        DateTime  @default(now())
 
   @@index([empleado_id, vigenciaDesde])
+}
+
+/// Proyecto operativo al que se puede asignar personal para reportes.
+model Proyecto {
+  id             Int      @id @default(autoincrement())
+  codigo         String   @unique
+  nombre         String
+  descripcion    String?
+  departamentoId Int?
+  activo         Boolean  @default(true)
+  creadoEn       DateTime @default(now())
+
+  departamento Departamento?        @relation(fields: [departamentoId], references: [id], onDelete: SetNull)
+  asignaciones AsignacionProyecto[]
+
+  @@index([departamentoId, activo])
+}
+
+/// Vigencia de la asignación de un empleado a un proyecto.
+model AsignacionProyecto {
+  id                   Int       @id @default(autoincrement())
+  proyectoId           Int
+  empleadoId           Int
+  porcentajeDedicacion Float     @default(1)
+  desde                DateTime
+  hasta                DateTime?
+  creadoEn             DateTime  @default(now())
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Restrict)
+  empleado Empleado @relation(fields: [empleadoId], references: [id], onDelete: Restrict)
+
+  @@unique([proyectoId, empleadoId, desde])
+  @@index([empleadoId, desde, hasta])
 }
 
 model HistorialLaboral {
@@ -602,4 +639,45 @@ model Auditoria {
 
   @@index([entidad, entidadId])
   @@index([usuarioId, ocurridoEn])
+}
+
+// ═════════════════ PROYECCIONES DE REPORTE ═════════════════
+
+/// Proyección mensual derivada de RegistroAsistencia.
+model ProyeccionAsistenciaMensual {
+  id              String   @id @default(uuid())
+  empleadoId      Int
+  departamentoId  Int
+  anio            Int
+  mes             Int
+  diasPresente    Int
+  diasAusente     Int
+  diasTardanza    Int
+  minutosTardanza Int
+  pctAusentismo   Float
+  calculadoEn     DateTime @default(now())
+
+  empleado Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  @@unique([empleadoId, anio, mes])
+  @@index([departamentoId, anio, mes])
+}
+
+/// Proyección mensual de costo de períodos cerrados o pagados.
+model ProyeccionCostoPlanilla {
+  id                   String   @id @default(uuid())
+  departamentoId       Int
+  anio                 Int
+  mes                  Int
+  empleados            Int
+  totalBrutoCent       Int
+  totalDeduccionesCent Int
+  totalNetoCent        Int
+  totalAportesCent     Int
+  calculadoEn          DateTime @default(now())
+
+  departamento Departamento @relation(fields: [departamentoId], references: [id], onDelete: Cascade)
+
+  @@unique([departamentoId, anio, mes])
+  @@index([anio, mes])
 }

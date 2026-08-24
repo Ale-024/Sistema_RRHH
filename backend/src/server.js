@@ -5,6 +5,7 @@ const BusEventos = require('./shared/event-bus');
 const reloj = require('./shared/reloj');
 const { crearClientePrisma } = require('./db/prisma');
 const { crearApp } = require('./app');
+const { crearMetricas } = require('./shared/infra/observabilidad');
 
 async function main() {
   let entorno;
@@ -21,6 +22,7 @@ async function main() {
     bus: new BusEventos(),
     clock: reloj,
     entorno,
+    metrics: crearMetricas(),
   };
 
   const app = crearApp(ctx);

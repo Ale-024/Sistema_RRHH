@@ -30,6 +30,21 @@ function registrarTareasProgramadas(ctx, cron) {
       console.error('[cron] Fallo la alerta de prescripcion:', error.message);
     }
   });
+  cron.schedule('30 2 * * *', async () => {
+    const inicio = Date.now();
+    try {
+      const { refrescarProyecciones } = require('../modules/reportes/application/proyecciones.usecase');
+      const resultado = await refrescarProyecciones(ctx);
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'proyecciones', duracionMs);
+      logJson('info', 'proyecciones_refrescadas', { ...resultado, duracionMs });
+    } catch (error) {
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'proyecciones', duracionMs, error);
+      logJson('error', 'fallo_proyecciones', { error: error.message, duracionMs });
+    }
+  });
 }
 
 module.exports = { registrarTareasProgramadas };
+const { registrarTarea, logJson } = require('../shared/infra/observabilidad');

@@ -34,6 +34,10 @@ const PERMISOS = [
   ['parametros:administrar', 'Administrar vigencias de parametros legales'],
   ['usuarios:administrar', 'Gestionar usuarios, roles y estados de cuenta'],
   ['auditoria:leer', 'Consultar la bitacora de auditoria'],
+  ['reportes:ver', 'Consultar reportes del alcance autorizado'],
+  ['reportes:ver_global', 'Consultar reportes globales y costos de planilla'],
+  ['reportes:administrar', 'Refrescar proyecciones de reportes'],
+  ['observabilidad:leer', 'Consultar metricas operativas'],
 ];
 
 /**
@@ -79,25 +83,27 @@ const ROLES = [
       'planilla:crear',
       'planilla:calcular',
       'planilla:administrar',
+      'reportes:ver',
+      'reportes:administrar',
     ],
   },
   {
     codigo: 'GERENTE_DEPTO',
     nombre: 'Gerente de departamento',
     descripcion: 'Visibilidad limitada a su departamento mediante scope ABAC.',
-    permisos: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar'],
+    permisos: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'reportes:ver'],
   },
   {
     codigo: 'DIRECCION',
     nombre: 'Direccion general',
     descripcion: 'Lectura global de planilla y auditoria; autorizacion de cierres.',
-    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'auditoria:leer'],
+    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'auditoria:leer', 'reportes:ver_global'],
   },
   {
     codigo: 'ADMIN_TI',
     nombre: 'Administrador de TI',
     descripcion: 'Usuarios, roles y bitacora. Sin operaciones de negocio.',
-    permisos: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer'],
+    permisos: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],
   },
 ];
 

@@ -14,6 +14,7 @@ import AdminRequests from './pages/AdminRequests';
 import AdminPayroll from './pages/AdminPayroll';
 import AdminParameters from './pages/AdminParameters';
 import AdminUsuarios from './pages/AdminUsuarios';
+import AdminReports from './pages/AdminReports';
 import AdminVacations from './pages/AdminVacations';
 import EmployeePayroll from './pages/EmployeePayroll';
 import Layout from './components/Layout';
@@ -60,6 +61,7 @@ function App() {
                   <Route path="payroll" element={<AdminPayroll />} />
                   <Route path="parameters" element={<AdminParameters />} />
                   <Route path="usuarios" element={<AdminUsuarios />} />
+                  <Route path="reports" element={<AdminReports />} />
                   <Route path="vacations" element={<AdminVacations />} />
                 </Routes>
               </ProtectedRoute>

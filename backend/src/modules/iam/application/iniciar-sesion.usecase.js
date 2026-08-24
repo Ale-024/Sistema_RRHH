@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
+const { usuarioRequiereMfa, verificarCodigoTotp } = require('./mfa');
 const {
   permisosDeUsuario,
   rolPrimario,
@@ -42,7 +43,8 @@ async function crearSesionRefresh(tx, usuarioId, ip, userAgent) {
   return token;
 }
 
-async function iniciarSesion({ email, password }, ctx) {
+async function iniciarSesion(datos, ctx) {
+  const { email, password } = datos;
   const { prisma, bus, clock, req } = ctx;
 
   const usuario = await prisma.usuario.findUnique({
@@ -93,6 +95,12 @@ async function iniciarSesion({ email, password }, ctx) {
 
   const passwordValida = await bcrypt.compare(password, usuario.password_hash);
   if (!passwordValida) return fallido();
+
+  if (usuarioRequiereMfa(usuario) && usuario.mfaSecret && !usuario.mfaSecret.startsWith('PENDING:')) {
+    if (!datos.otp || !verificarCodigoTotp(usuario.mfaSecret, datos.otp, clock.ahora().getTime())) {
+      throw new ErrorAplicacion('MFA_REQUERIDO', 401, 'Debe proporcionar un codigo TOTP valido.');
+    }
+  }
 
   const permisos = permisosDeUsuario(usuario);
   const codigoRol = rolPrimario(usuario.roles.map((r) => r.rol.codigo), PRIORIDAD_ROLES);

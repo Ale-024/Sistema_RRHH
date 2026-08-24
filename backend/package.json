@@ -11,6 +11,8 @@
     "arch": "depcruise src",
     "seed": "node prisma/seeds/index.js",
     "verify:payroll": "node scripts/verificar-cierre-planilla.js",
+    "backup": "node scripts/respaldar.js",
+    "restore": "node scripts/restaurar.js",
     "test": "vitest run"
   },
   "keywords": [],

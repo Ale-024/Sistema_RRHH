@@ -7,6 +7,8 @@ const contextoRequest = require('./shared/http/contexto-request');
 const noEncontrado = require('./shared/http/no-encontrado');
 const manejadorErrores = require('./shared/http/manejador-errores');
 const { crearCifrador } = require('./shared/infra/cifrado');
+const { crearMetricas, snapshotMetricas } = require('./shared/infra/observabilidad');
+const { exigirPermiso } = require('./shared/http/autorizacion');
 
 const iam = require('./modules/iam/iam.module');
 const organizacion = require('./modules/organizacion/organizacion.module');
@@ -15,6 +17,7 @@ const asistencia = require('./modules/asistencia/asistencia.module');
 const permisos = require('./modules/permisos/permisos.module');
 const vacaciones = require('./modules/vacaciones/vacaciones.module');
 const planilla = require('./modules/planilla/planilla.module');
+const reportes = require('./modules/reportes/reportes.module');
 const notificaciones = require('./modules/notificaciones/notificaciones.module');
 const { registrarSuscriptores, rutasAdminAuditoria } = require('./modules/auditoria/auditoria.module');
 
@@ -35,6 +38,7 @@ function crearApp(ctx) {
 
   const app = express();
   app.locals.prisma = c.prisma;
+  app.locals.metrics = ctx.metrics ?? crearMetricas();
 
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
@@ -69,15 +73,26 @@ function crearApp(ctx) {
   routerAdmin.use(permisos.rutasAdmin(c));
   routerAdmin.use(vacaciones.rutasAdmin(c));
   routerAdmin.use(planilla.rutasAdmin(c));
+  routerAdmin.use(reportes.rutasAdminReportes(c));
   routerAdmin.use(iam.rutasAdminUsuarios(c));
   routerAdmin.use(rutasAdminAuditoria(c));
 
   app.use('/api/auth', iam.rutasAuth(c));
   app.use('/api/employee', routerEmpleado);
   app.use('/api/admin', routerAdmin);
-  app.get('/api/salud', (_req, res) => {
-    res.json({ status: 'ok', mensaje: 'SIRH-MKT API en ejecucion' });
+  const routerV1Reportes = express.Router();
+  routerV1Reportes.use(iam.verificarToken, iam.cargarPermisos, reportes.rutasReportes(c));
+  app.use('/v1/reportes', routerV1Reportes);
+  app.get(['/api/salud', '/v1/salud'], async (_req, res) => {
+    try {
+      if (typeof c.prisma.$queryRaw === 'function') await c.prisma.$queryRaw`SELECT 1 AS ok`;
+      res.json({ status: 'ok', version: process.env.APP_VERSION ?? 'dev', activoSegundos: snapshotMetricas(app.locals.metrics).activoSegundos });
+    } catch {
+      res.status(503).json({ status: 'degraded', database: 'unavailable' });
+    }
   });
+  app.get('/api/metricas', iam.verificarToken, iam.cargarPermisos, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
+  app.get('/v1/metricas', iam.verificarToken, iam.cargarPermisos, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
 
   app.use(noEncontrado);
   app.use(manejadorErrores);

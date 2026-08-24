@@ -10,6 +10,7 @@ import {
   FileText,
   Receipt,
   Shield,
+  BarChart3,
   User,
   LogOut,
   Menu,
@@ -39,6 +40,7 @@ export default function Layout() {
     { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permiso: 'planilla:leer_global' },
     { name: 'Parámetros legales', path: '/admin/parameters', icon: Receipt, permiso: 'parametros:leer' },
     { name: 'Usuarios', path: '/admin/usuarios', icon: Shield, permiso: 'usuarios:administrar' },
+    { name: 'Reportes', path: '/admin/reports', icon: BarChart3, permiso: 'reportes:ver' },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
   const employeeLinks = [
@@ -48,7 +50,7 @@ export default function Layout() {
     { name: 'Mis Solicitudes', path: '/employee/requests', icon: FileText },
     { name: 'Vacaciones', path: '/employee/vacations', icon: CalendarDays, permiso: 'vacaciones:leer' },
     { name: 'Mis recibos', path: '/employee/payroll', icon: Receipt, permiso: 'planilla:leer' },
-  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
+  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso) || (l.permiso === 'reportes:ver' && tienePermiso(user, 'reportes:ver_global')));
 
   const links = esRolAdministrativo(user) ? adminLinks : employeeLinks;
 
