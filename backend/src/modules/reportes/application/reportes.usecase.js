@@ -1,5 +1,6 @@
 const { Prisma } = require('@prisma/client');
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
+const { esPostgres } = require('../../../db/prisma');
 
 function rango(query) {
   const ahora = new Date();
@@ -109,7 +110,11 @@ async function costoPlanilla(query, contexto, ctx) {
 async function buscarEmpleados(texto, contexto, ctx) {
   const consulta = texto.trim().replace(/["*:^()]/g, ' ');
   if (consulta.length < 2) throw new ErrorAplicacion('DATOS_INVALIDOS', 422, 'La busqueda requiere al menos 2 caracteres.');
-  const filas = await ctx.prisma.$queryRaw(Prisma.sql`SELECT empleadoId FROM empleado_fts WHERE empleado_fts MATCH ${`${consulta}*`} LIMIT 50`);
+  // SQLite usa FTS5 (MATCH con prefijo); Postgres usa ILIKE sobre la tabla
+  // de texto que mantienen los triggers. Ninguna de las dos guarda datos sensibles.
+  const filas = esPostgres
+    ? await ctx.prisma.$queryRaw(Prisma.sql`SELECT "empleadoId" FROM empleado_fts WHERE texto ILIKE ${`%${consulta}%`} LIMIT 50`)
+    : await ctx.prisma.$queryRaw(Prisma.sql`SELECT empleadoId FROM empleado_fts WHERE empleado_fts MATCH ${`${consulta}*`} LIMIT 50`);
   const ids = filas.map((fila) => Number(fila.empleadoId));
   if (!ids.length) return [];
   return ctx.prisma.empleado.findMany({

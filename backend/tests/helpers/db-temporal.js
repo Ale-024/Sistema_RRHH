@@ -1,48 +1,35 @@
 const { execSync } = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const { PrismaClient } = require('@prisma/client');
 
-function aplicarMigracionesDirectamente(archivo) {
-  // Fallback para el entorno Windows/Node donde el schema-engine de Prisma
-  // 5.22 no devuelve el detalle de un error al abrir SQLite. Se ejecutan las
-  // mismas migraciones versionadas; no se usa db push ni se omiten triggers.
-  const { DatabaseSync } = require('node:sqlite');
-  const db = new DatabaseSync(archivo);
-  const raizMigraciones = path.join(__dirname, '..', '..', 'prisma', 'migrations');
-  const migraciones = fs
-    .readdirSync(raizMigraciones)
-    .filter((nombre) => fs.statSync(path.join(raizMigraciones, nombre)).isDirectory())
-    .sort();
-  for (const migracion of migraciones) {
-    const sql = fs.readFileSync(path.join(raizMigraciones, migracion, 'migration.sql'), 'utf8');
-    db.exec(sql);
-  }
-  db.close();
-}
-
 /**
- * Crea una base SQLite temporal aplicando TODAS las migraciones
- * (incluidos los triggers), siembra roles/permisos y devuelve un
- * cliente Prisma aislado. El llamador debe ejecutar limpiar().
+ * Crea un schema efimero en PostgreSQL (Neon), aplica TODAS las migraciones
+ * versionadas (incluidos los triggers/invariantes), siembra el catalogo IAM
+ * minimo y devuelve un cliente Prisma aislado. El llamador debe ejecutar
+ * limpiar() para eliminar el schema.
+ *
+ * Requiere TEST_DATABASE_URL (o DATABASE_URL) apuntando a PostgreSQL.
+ * Para migraciones usa la conexion directa de Neon (sin `-pooler`).
  */
 async function crearBaseTemporal() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sirh-test-'));
-  const archivo = path.join(dir, 'test.db');
-  const url = `file:${archivo}`;
-
-  const env = { ...process.env, DATABASE_URL: url };
-  try {
-    execSync('node node_modules/prisma/build/index.js migrate deploy', {
-      cwd: path.join(__dirname, '..', '..'),
-      env,
-      stdio: 'pipe',
-    });
-  } catch {
-    fs.rmSync(archivo, { force: true });
-    aplicarMigracionesDirectamente(archivo);
+  const base = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
+  if (!base || !/^postgres(ql)?:\/\//.test(base)) {
+    throw new Error(
+      'Los tests requieren una base PostgreSQL: define TEST_DATABASE_URL con la cadena de conexion (Neon), por ejemplo postgresql://usuario:clave@host/db?sslmode=require'
+    );
   }
+
+  const schema = `test_${crypto.randomBytes(6).toString('hex')}`;
+  const admin = new PrismaClient({ datasources: { db: { url: base } } });
+  await admin.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+
+  const url = `${base}${base.includes('?') ? '&' : '?'}schema=${schema}`;
+  execSync('node node_modules/prisma/build/index.js migrate deploy', {
+    cwd: path.join(__dirname, '..', '..'),
+    env: { ...process.env, DATABASE_URL: url },
+    stdio: 'pipe',
+  });
 
   const prisma = new PrismaClient({ datasources: { db: { url } } });
 
@@ -131,7 +118,8 @@ async function crearBaseTemporal() {
     url,
     async limpiar() {
       await prisma.$disconnect();
-      fs.rmSync(dir, { recursive: true, force: true });
+      await admin.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await admin.$disconnect();
     },
   };
 }

@@ -10,7 +10,12 @@ function fechaArchivo(fecha = new Date()) {
 }
 
 function rutaBase(url) {
-  if (!url?.startsWith('file:')) throw new Error('DATABASE_URL debe apuntar a un archivo SQLite.');
+  if (url && /^postgres(ql)?:\/\//.test(url)) {
+    throw new Error(
+      'Con PostgreSQL (Neon) el respaldo fisico de SQLite no aplica: usa las herramientas de Neon (branches, punto en el tiempo o export a traves de pg_dump).'
+    );
+  }
+  if (!url?.startsWith('file:')) throw new Error('DATABASE_URL debe apuntar a un archivo SQLite o a PostgreSQL.');
   return url.slice(5).split('?')[0];
 }
 
