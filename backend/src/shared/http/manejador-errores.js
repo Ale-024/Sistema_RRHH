@@ -32,6 +32,17 @@ function mapear(err) {
     };
   }
 
+  const dominioSql = ['SALDO_VACACIONES_INSUFICIENTE', 'SALDO_VACACIONES_EXCEDIDO', 'VACACION_SOLAPADA', 'VACACION_TRANSICION_INVALIDA', 'VACACION_RANGO_INVALIDO'];
+  const codigoSql = dominioSql.find((codigo) => String(err.message ?? '').includes(codigo));
+  if (codigoSql) {
+    return {
+      status: 409,
+      type: `${BASE_TIPO_ERROR}/${codigoSql.toLowerCase().replace(/_/g, '-')}`,
+      title: tituloPorCodigo(codigoSql),
+      detail: 'La operacion viola una regla de integridad de vacaciones.',
+    };
+  }
+
   return {
     status: 500,
     type: `${BASE_TIPO_ERROR}/interno`,
@@ -49,6 +60,10 @@ function tituloPorCodigo(codigo) {
     PERMISO_DENEGADO: 'Permiso denegado',
     NO_ENCONTRADO: 'Recurso no encontrado',
     CONFLICTO_ESTADO: 'Conflicto con el estado actual',
+    SALDO_VACACIONES_INSUFICIENTE: 'Saldo vacacional insuficiente',
+    SALDO_VACACIONES_EXCEDIDO: 'Saldo vacacional excedido',
+    VACACION_SOLAPADA: 'Solicitud vacacional solapada',
+    VACACION_TRANSICION_INVALIDA: 'Transicion de vacaciones invalida',
   };
   return titulos[codigo] ?? 'Solicitud rechazada';
 }

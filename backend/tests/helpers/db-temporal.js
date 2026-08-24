@@ -65,6 +65,10 @@ async function crearBaseTemporal() {
     'solicitudes:revisar',
     'solicitudes:leer_global',
     'permisos:aprobar',
+    'vacaciones:leer',
+    'vacaciones:leer_global',
+    'vacaciones:crear',
+    'vacaciones:aprobar',
     'planilla:leer_global',
     'planilla:administrar',
     'usuarios:administrar',
@@ -75,16 +79,16 @@ async function crearBaseTemporal() {
   }
 
   const MATRIZ = {
-    EMPLEADO: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear'],
-    ENCUESTADOR: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear'],
+    EMPLEADO: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear'],
+    ENCUESTADOR: ['asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear'],
     RRHH_SUP: [
       'empleados:leer', 'empleados:leer_global', 'empleados:crear',
       'empleados:actualizar', 'empleados:desvincular', 'contratos:crear',
       'organizacion:administrar', 'asistencia:leer_global',
       'asistencia:importar', 'asistencia:corregir', 'asistencia:cerrar',
-      'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'planilla:leer_global',
+      'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'planilla:leer_global',
     ],
-    GERENTE_DEPTO: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar'],
+    GERENTE_DEPTO: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar'],
     DIRECCION: ['planilla:leer_global', 'planilla:administrar', 'auditoria:leer'],
     ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'auditoria:leer'],
   };

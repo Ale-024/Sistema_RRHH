@@ -13,6 +13,7 @@ const organizacion = require('./modules/organizacion/organizacion.module');
 const empleados = require('./modules/empleados/empleados.module');
 const asistencia = require('./modules/asistencia/asistencia.module');
 const permisos = require('./modules/permisos/permisos.module');
+const vacaciones = require('./modules/vacaciones/vacaciones.module');
 const planilla = require('./modules/planilla/planilla.module');
 const notificaciones = require('./modules/notificaciones/notificaciones.module');
 const { registrarSuscriptores, rutasAdminAuditoria } = require('./modules/auditoria/auditoria.module');
@@ -29,6 +30,7 @@ function crearApp(ctx) {
   // Suscriptores de eventos -> bitacora de auditoria.
   registrarSuscriptores(c.bus, c.prisma);
   permisos.registrarSuscriptores(c.bus, c.prisma);
+  vacaciones.registrarSuscriptores(c.bus, c.prisma);
 
   const app = express();
   app.locals.prisma = c.prisma;
@@ -49,6 +51,7 @@ function crearApp(ctx) {
       empleados.rutasEmpleado,
       asistencia.rutasEmpleado,
       permisos.rutasEmpleado,
+      vacaciones.rutasEmpleado,
       planilla.rutasEmpleado,
       notificaciones.rutasEmpleado,
     ].map((fabrica) => fabrica(c))
@@ -63,6 +66,7 @@ function crearApp(ctx) {
   routerAdmin.use(organizacion.rutasAdminOrganizacion(c));
   routerAdmin.use(asistencia.rutasAdmin(c));
   routerAdmin.use(permisos.rutasAdmin(c));
+  routerAdmin.use(vacaciones.rutasAdmin(c));
   routerAdmin.use(planilla.rutasAdmin(c));
   routerAdmin.use(iam.rutasAdminUsuarios(c));
   routerAdmin.use(rutasAdminAuditoria(c));

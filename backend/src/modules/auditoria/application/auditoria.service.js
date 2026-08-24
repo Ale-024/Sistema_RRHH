@@ -61,6 +61,21 @@ function registrarSuscriptores(bus, prisma) {
   bus.suscribir('PermisoRechazado', auditarPermiso('RECHAZAR'));
   bus.suscribir('PermisoCorreccionSolicitada', auditarPermiso('SOLICITAR_CORRECCION'));
   bus.suscribir('PermisoCancelado', auditarPermiso('CANCELAR'));
+  const auditarVacacion = (accion) => async (evento) => {
+    await registrar(prisma, {
+      usuarioId: evento.usuarioId ?? null,
+      entidad: 'SolicitudVacacion',
+      entidadId: evento.vacacionId,
+      accion,
+      despues: { ...evento },
+    });
+  };
+  bus.suscribir('VacacionSolicitada', auditarVacacion('CREAR'));
+  bus.suscribir('VacacionEnviadaRevision', auditarVacacion('ENVIAR_REVISION'));
+  bus.suscribir('VacacionAprobada', auditarVacacion('APROBAR'));
+  bus.suscribir('VacacionRechazada', auditarVacacion('RECHAZAR'));
+  bus.suscribir('VacacionCorreccionSolicitada', auditarVacacion('SOLICITAR_CORRECCION'));
+  bus.suscribir('VacacionCancelada', auditarVacacion('CANCELAR'));
 }
 
 module.exports = { registrar, registrarSuscriptores };

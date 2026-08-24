@@ -65,6 +65,25 @@ async function sembrarCatalogos() {
   }
 }
 
+async function sembrarParametrosLegales() {
+  const valores = [
+    ['VAC_DIAS_ANIO_1', '10'],
+    ['VAC_DIAS_ANIO_2', '12'],
+    ['VAC_DIAS_ANIO_3', '15'],
+    ['VAC_DIAS_ANIO_4', '20'],
+  ];
+  for (const [clave, valor] of valores) {
+    const vigente = await prisma.parametroLegal.findFirst({ where: { clave, vigenciaDesde: new Date('2020-01-01T00:00:00.000Z') } });
+    if (vigente) {
+      await prisma.parametroLegal.update({ where: { id: vigente.id }, data: { valor, activo: true } });
+    } else {
+      await prisma.parametroLegal.create({
+        data: { clave, valor, unidad: 'DIAS', vigenciaDesde: new Date('2020-01-01T00:00:00.000Z'), baseLegal: 'Codigo de Trabajo, escala vacacional' },
+      });
+    }
+  }
+}
+
 async function sembrarAdmin() {
   let depto = await prisma.departamento.findFirst({ where: { nombre: 'Recursos Humanos' } });
   if (!depto) {
@@ -121,6 +140,8 @@ async function main() {
   await sembrarIam();
   console.log('Sembrando catalogos iniciales (turnos)...');
   await sembrarCatalogos();
+  console.log('Sembrando parametros legales de vacaciones...');
+  await sembrarParametrosLegales();
   console.log('Sembrando administrador inicial...');
   await sembrarAdmin();
   console.log('Seed completado.');

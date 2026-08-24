@@ -5,7 +5,8 @@ import {
   Building2, 
   LayoutDashboard, 
   Users, 
-  CalendarClock, 
+  CalendarClock,
+  CalendarDays,
   FileText,
   Receipt,
   Shield,
@@ -34,6 +35,7 @@ export default function Layout() {
     { name: 'Empleados', path: '/admin/employees', icon: Users, permiso: 'empleados:leer' },
     { name: 'Asistencia', path: '/admin/attendance', icon: CalendarClock, permiso: 'asistencia:leer_global' },
     { name: 'Solicitudes', path: '/admin/requests', icon: FileText, permiso: 'solicitudes:revisar' },
+    { name: 'Vacaciones', path: '/admin/vacations', icon: CalendarDays, permiso: 'vacaciones:aprobar' },
     { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permiso: 'planilla:leer_global' },
     { name: 'Usuarios', path: '/admin/usuarios', icon: Shield, permiso: 'usuarios:administrar' },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
@@ -43,7 +45,8 @@ export default function Layout() {
     { name: 'Mi Perfil', path: '/employee/profile', icon: User },
     { name: 'Asistencia', path: '/employee/attendance', icon: CalendarClock },
     { name: 'Mis Solicitudes', path: '/employee/requests', icon: FileText },
-  ];
+    { name: 'Vacaciones', path: '/employee/vacations', icon: CalendarDays, permiso: 'vacaciones:leer' },
+  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
   const links = esRolAdministrativo(user) ? adminLinks : employeeLinks;
 

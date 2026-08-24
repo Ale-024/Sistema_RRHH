@@ -6,12 +6,14 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import EmployeeProfile from './pages/EmployeeProfile';
 import EmployeeRequests from './pages/EmployeeRequests';
 import EmployeeAttendance from './pages/EmployeeAttendance';
+import EmployeeVacations from './pages/EmployeeVacations';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminEmployees from './pages/AdminEmployees';
 import AdminAttendance from './pages/AdminAttendance';
 import AdminRequests from './pages/AdminRequests';
 import AdminPayroll from './pages/AdminPayroll';
 import AdminUsuarios from './pages/AdminUsuarios';
+import AdminVacations from './pages/AdminVacations';
 import Layout from './components/Layout';
 
 const rutaSegunRol = (user) => (esRolAdministrativo(user) ? '/admin' : '/employee');
@@ -55,6 +57,7 @@ function App() {
                   <Route path="requests" element={<AdminRequests />} />
                   <Route path="payroll" element={<AdminPayroll />} />
                   <Route path="usuarios" element={<AdminUsuarios />} />
+                  <Route path="vacations" element={<AdminVacations />} />
                 </Routes>
               </ProtectedRoute>
             }
@@ -69,6 +72,7 @@ function App() {
                 <Route path="profile" element={<EmployeeProfile />} />
                 <Route path="attendance" element={<EmployeeAttendance />} />
                 <Route path="requests" element={<EmployeeRequests />} />
+                <Route path="vacations" element={<EmployeeVacations />} />
               </Routes>
             }
           />

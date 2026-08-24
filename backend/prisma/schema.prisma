@@ -132,16 +132,19 @@ model Empleado {
   estadoLaboral       String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | VACACIONES | INACTIVO
   causaSalida         String?
 
-  asistencias        RegistroAsistencia[]
-  marcajes           Marcaje[]
-  horarios           HorarioEmpleado[]
-  solicitudes        Solicitud[]
-  solicitudesPermiso SolicitudPermiso[]
-  nominas            Nomina[]
-  notificaciones     Notificacion[]
-  contratos          Contrato[]
-  historial          HistorialLaboral[]
-  documentos         DocumentoEmpleado[]
+  asistencias            RegistroAsistencia[]
+  marcajes               Marcaje[]
+  horarios               HorarioEmpleado[]
+  solicitudes            Solicitud[]
+  solicitudesPermiso     SolicitudPermiso[]
+  periodosVacacionales   PeriodoVacacional[]
+  solicitudesVacacion    SolicitudVacacion[]
+  vacacionesComoSuplente SolicitudVacacion[]  @relation("EmpleadoSuplencias")
+  nominas                Nomina[]
+  notificaciones         Notificacion[]
+  contratos              Contrato[]
+  historial              HistorialLaboral[]
+  documentos             DocumentoEmpleado[]
 
   @@index([estadoLaboral])
 }
@@ -246,23 +249,25 @@ model Marcaje {
 
 /// Consolidado diario derivado del marcaje; un registro por empleado y fecha.
 model RegistroAsistencia {
-  id                  Int               @id @default(autoincrement())
+  id                  Int                @id @default(autoincrement())
   empleadoId          Int
-  empleado            Empleado          @relation(fields: [empleadoId], references: [id])
+  empleado            Empleado           @relation(fields: [empleadoId], references: [id])
   fecha               DateTime /// medianoche local del dia consolidado
   turnoId             Int?
-  turno               Turno?            @relation(fields: [turnoId], references: [id])
+  turno               Turno?             @relation(fields: [turnoId], references: [id])
   horaEntrada         DateTime?
   horaSalida          DateTime?
-  minutosTrabajados   Int               @default(0)
-  minutosTardanza     Int               @default(0)
-  horasExtraDiurnas   Float             @default(0)
-  horasExtraNocturnas Float             @default(0)
+  minutosTrabajados   Int                @default(0)
+  minutosTardanza     Int                @default(0)
+  horasExtraDiurnas   Float              @default(0)
+  horasExtraNocturnas Float              @default(0)
   estadoDia           String // PRESENTE | AUSENTE | TARDANZA | PERMISO | VACACION | INCAPACIDAD | DESCANSO | FERIADO
   permisoId           Int?
-  permiso             SolicitudPermiso? @relation(fields: [permisoId], references: [id], onDelete: SetNull)
+  permiso             SolicitudPermiso?  @relation(fields: [permisoId], references: [id], onDelete: SetNull)
+  vacacionId          Int?
+  vacacion            SolicitudVacacion? @relation(fields: [vacacionId], references: [id], onDelete: SetNull)
   observacion         String?
-  cerrado             Boolean           @default(false)
+  cerrado             Boolean            @default(false)
   cerradoPor          Int?
   cerradoEn           DateTime?
 
@@ -357,6 +362,109 @@ model PermisoHistorialEstado {
   permiso SolicitudPermiso @relation(fields: [permisoId], references: [id], onDelete: Restrict)
 
   @@index([permisoId, ocurridoEn])
+}
+
+// ════════════════════════ VACACIONES (CU04) ════════════════════════
+
+/// Parámetros legales versionados. La escala de vacaciones se carga aquí;
+/// nunca se fija en el caso de uso.
+model ParametroLegal {
+  id            Int       @id @default(autoincrement())
+  clave         String
+  valor         String
+  unidad        String?
+  descripcion   String?
+  baseLegal     String?
+  vigenciaDesde DateTime
+  vigenciaHasta DateTime?
+  creadoPor     Int?
+  creadoEn      DateTime  @default(now())
+  activo        Boolean   @default(true)
+
+  @@index([clave, vigenciaDesde])
+  @@index([vigenciaDesde, vigenciaHasta])
+}
+
+/// Un periodo por año de servicio cumplido; el derecho es un snapshot del
+/// parámetro legal vigente al momento del devengo.
+model PeriodoVacacional {
+  id           Int      @id @default(autoincrement())
+  empleadoId   Int
+  anioServicio Int
+  desde        DateTime
+  hasta        DateTime
+  diasDerecho  Int
+  diasGozados  Float    @default(0)
+  diasPagados  Float    @default(0)
+  estado       String   @default("VIGENTE") // VIGENTE | AGOTADO | PRESCRITO | LIQUIDADO
+  generadoEn   DateTime @default(now())
+
+  empleado    Empleado                  @relation(fields: [empleadoId], references: [id], onDelete: Restrict)
+  solicitudes SolicitudVacacion[]
+  movimientos MovimientoSaldoVacacion[]
+
+  @@unique([empleadoId, anioServicio])
+  @@index([empleadoId, estado])
+}
+
+/// Solicitud de goce vacacional con suplente opcional.
+model SolicitudVacacion {
+  id                  Int       @id @default(autoincrement())
+  folio               String    @unique
+  empleadoId          Int
+  periodoId           Int
+  fechaInicio         DateTime
+  fechaFin            DateTime
+  diasHabiles         Float
+  estado              String    @default("SOLICITADO") // SOLICITADO | EN_REVISION | APROBADO | RECHAZADO | CANCELADO
+  suplenteId          Int?
+  revisadoPor         Int?
+  revisadoEn          DateTime?
+  observacionRevision String?
+  creadoEn            DateTime  @default(now())
+  actualizadoEn       DateTime  @updatedAt
+
+  empleado    Empleado                  @relation(fields: [empleadoId], references: [id], onDelete: Restrict)
+  periodo     PeriodoVacacional         @relation(fields: [periodoId], references: [id], onDelete: Restrict)
+  suplente    Empleado?                 @relation("EmpleadoSuplencias", fields: [suplenteId], references: [id], onDelete: SetNull)
+  historial   VacacionHistorialEstado[]
+  asistencias RegistroAsistencia[]
+
+  @@index([empleadoId, estado])
+  @@index([estado, creadoEn])
+  @@index([fechaInicio, fechaFin])
+}
+
+/// Historial append-only de la FSM de vacaciones.
+model VacacionHistorialEstado {
+  id             Int      @id @default(autoincrement())
+  vacacionId     Int
+  estadoAnterior String?
+  estadoNuevo    String
+  usuarioId      Int
+  motivo         String?
+  ip             String?
+  ocurridoEn     DateTime @default(now())
+
+  vacacion SolicitudVacacion @relation(fields: [vacacionId], references: [id], onDelete: Restrict)
+
+  @@index([vacacionId, ocurridoEn])
+}
+
+/// Libro mayor append-only. DEVENGO suma; GOCE/PAGO/PRESCRIPCION consume.
+model MovimientoSaldoVacacion {
+  id            Int      @id @default(autoincrement())
+  periodoId     Int
+  tipo          String // DEVENGO | GOCE | PAGO | AJUSTE | PRESCRIPCION
+  dias          Float
+  referenciaId  Int?
+  motivo        String?
+  registradoPor Int?
+  ocurridoEn    DateTime @default(now())
+
+  periodo PeriodoVacacional @relation(fields: [periodoId], references: [id], onDelete: Restrict)
+
+  @@index([periodoId, ocurridoEn])
 }
 
 // ═════════════════════════ PLANILLA ═════════════════════════
