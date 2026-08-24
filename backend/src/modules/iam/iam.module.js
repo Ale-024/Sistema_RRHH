@@ -6,6 +6,7 @@
 const { rutasAuth } = require('./routes/auth.routes');
 const { rutasAdminUsuarios } = require('./routes/usuarios.routes');
 const { verificarToken, cargarPermisos, exigirMfaCompletado } = require('./application/autenticacion');
+const { cambiarPassword } = require('./application/cambiar-password.usecase');
 
 module.exports = {
   rutasAuth,
@@ -13,4 +14,5 @@ module.exports = {
   verificarToken,
   cargarPermisos,
   exigirMfaCompletado,
+  cambiarPassword,
 };

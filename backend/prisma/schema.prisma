@@ -30,12 +30,15 @@ model Usuario {
 }
 
 model Rol {
-  id          Int          @id @default(autoincrement())
-  codigo      String       @unique // EMPLEADO | ENCUESTADOR | RRHH_SUP | GERENTE_DEPTO | DIRECCION | ADMIN_TI
-  nombre      String
-  descripcion String?
-  permisos    RolPermiso[]
-  usuarios    UsuarioRol[]
+  id             Int     @id @default(autoincrement())
+  codigo         String  @unique // EMPLEADO | ENCUESTADOR | RRHH_SUP | GERENTE_DEPTO | DIRECCION | ADMIN_TI
+  nombre         String
+  descripcion    String?
+  /// Posicion del rol en la cadena de mando organizacional (Anexo de autoridad).
+  /// No es privilegio acumulativo: solo sirve de guarda al otorgar/revocar.
+  nivelAutoridad Int     @default(10)
+  permisos       RolPermiso[]
+  usuarios       UsuarioRol[]
 }
 
 model PermisoSistema {
@@ -60,12 +63,45 @@ model UsuarioRol {
   usuarioId           Int
   rolId               Int
   scopeDepartamentoId Int?
+  /// Quien ejecuto la asignacion. Null = SISTEMA (seed o alta automatica por puesto).
+  asignadoPorId       Int?
   asignadoEn          DateTime      @default(now())
   usuario             Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   rol                 Rol           @relation(fields: [rolId], references: [id])
   scopeDepartamento   Departamento? @relation(fields: [scopeDepartamentoId], references: [id])
 
   @@id([usuarioId, rolId])
+}
+
+/// Autorizacion previa de negocio para otorgar roles de nivel >= 30 (Anexo sec. 3).
+/// Ciclo de vida: SOLICITADA -> AUTORIZADA | RECHAZADA; al ejecutarse queda CONSUMIDA.
+model AutorizacionRol {
+  id                  Int       @id @default(autoincrement())
+  beneficiarioId      Int
+  rolId               Int
+  scopeDepartamentoId Int?
+  solicitadaPorId     Int
+  autorizadaPorId     Int?
+  estado              String    @default("SOLICITADA") // SOLICITADA | AUTORIZADA | RECHAZADA
+  motivo              String?
+  creadaEn            DateTime  @default(now())
+  decididaEn          DateTime?
+  venceEn             DateTime?
+  consumidaEn         DateTime?
+
+  @@index([beneficiarioId, rolId, estado])
+  @@index([estado])
+}
+
+/// Excepciones explicitas y auditadas a la incompatibilidad RRHH_SUP + DIRECCION.
+model RolIncompatibilidadExcepcion {
+  id            Int       @id @default(autoincrement())
+  rolAId        Int
+  rolBId        Int
+  vigenciaDesde DateTime  @default(now())
+  vigenciaHasta DateTime?
+  motivo        String
+  activo        Boolean   @default(true)
 }
 
 /// Refresh tokens rotativos con deteccion de reuso.
@@ -90,7 +126,7 @@ model SesionRefresh {
 
 model Departamento {
   id          Int                       @id @default(autoincrement())
-  nombre      String
+  nombre      String                    @unique
   descripcion String?
   puestos     Puesto[]
   scopes      UsuarioRol[]
@@ -100,7 +136,9 @@ model Departamento {
 
 model Puesto {
   id              Int          @id @default(autoincrement())
-  titulo          String
+  titulo          String       @unique
+  /// Rol RBAC que se asigna automaticamente al contratar a alguien con este puesto.
+  rolSugerido     String?
   departamento_id Int
   departamento    Departamento @relation(fields: [departamento_id], references: [id])
   empleados       Empleado[]

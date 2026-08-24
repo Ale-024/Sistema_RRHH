@@ -32,14 +32,17 @@ function mapear(err) {
     };
   }
 
-  const dominioSql = ['SALDO_VACACIONES_INSUFICIENTE', 'SALDO_VACACIONES_EXCEDIDO', 'VACACION_SOLAPADA', 'VACACION_TRANSICION_INVALIDA', 'VACACION_RANGO_INVALIDO', 'PLANILLA_CERRADA_INMUTABLE', 'DETALLE_PLANILLA_INMUTABLE', 'LINEA_PLANILLA_INMUTABLE', 'DESCUADRE_DETALLE_PLANILLA', 'PLANILLA_TRANSICION_INVALIDA'];
+  const dominioSql = ['SALDO_VACACIONES_INSUFICIENTE', 'SALDO_VACACIONES_EXCEDIDO', 'VACACION_SOLAPADA', 'VACACION_TRANSICION_INVALIDA', 'VACACION_RANGO_INVALIDO', 'PLANILLA_CERRADA_INMUTABLE', 'DETALLE_PLANILLA_INMUTABLE', 'LINEA_PLANILLA_INMUTABLE', 'DESCUADRE_DETALLE_PLANILLA', 'PLANILLA_TRANSICION_INVALIDA', 'INV1_AUTOASIGNACION', 'INV3_SIN_AUTORIZACION_VIGENTE', 'INV5_ALCANCE_INVALIDO', 'INV6_ROLES_INCOMPATIBLES', 'INV7_ULTIMO_ADMINISTRADOR'];
   const codigoSql = dominioSql.find((codigo) => String(err.message ?? '').includes(codigo));
   if (codigoSql) {
+    const esAnexo = codigoSql.startsWith('INV');
     return {
       status: 409,
       type: `${BASE_TIPO_ERROR}/${codigoSql.toLowerCase().replace(/_/g, '-')}`,
       title: tituloPorCodigo(codigoSql),
-      detail: 'La operacion viola una regla de integridad de vacaciones.',
+      detail: esAnexo
+        ? `La operacion viola una invariante del anexo de autoridad (${codigoSql}).`
+        : 'La operacion viola una regla de integridad de vacaciones.',
     };
   }
 
@@ -74,6 +77,11 @@ function tituloPorCodigo(codigo) {
     MFA_INVALIDO: 'Codigo MFA invalido',
     MFA_NO_APLICA: 'MFA no aplica a este perfil',
     MFA_YA_CONFIGURADO: 'MFA ya configurado',
+    INV1_AUTOASIGNACION: 'Autoasignacion de rol prohibida',
+    INV3_SIN_AUTORIZACION_VIGENTE: 'Autorizacion previa requerida',
+    INV5_ALCANCE_INVALIDO: 'Alcance departamental invalido',
+    INV6_ROLES_INCOMPATIBLES: 'Roles incompatibles por segregacion',
+    INV7_ULTIMO_ADMINISTRADOR: 'Continuidad administrativa',
   };
   return titulos[codigo] ?? 'Solicitud rechazada';
 }

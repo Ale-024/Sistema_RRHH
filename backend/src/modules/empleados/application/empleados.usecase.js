@@ -104,6 +104,21 @@ async function crearEmpleado(datos, ctx) {
       },
     });
 
+    // Anexo de autoridad (sec. 3.1): el alta laboral confiere solo el rol
+    // base EMPLEADO. Si el puesto sugiere ENCUESTADOR (nivel 10) se agrega;
+    // los roles elevados exigen su propio flujo de autorizacion.
+    const puesto = await tx.puesto.findUnique({ where: { id: datos.puesto_id } });
+    const rolBase = await tx.rol.findUnique({ where: { codigo: 'EMPLEADO' } });
+    if (rolBase) {
+      await tx.usuarioRol.create({ data: { usuarioId: usuario.id, rolId: rolBase.id } });
+    }
+    if (puesto?.rolSugerido && puesto.rolSugerido !== 'EMPLEADO') {
+      const rolSugerido = await tx.rol.findUnique({ where: { codigo: puesto.rolSugerido } });
+      if (rolSugerido && rolSugerido.nivelAutoridad <= 10) {
+        await tx.usuarioRol.create({ data: { usuarioId: usuario.id, rolId: rolSugerido.id } });
+      }
+    }
+
     await tx.notificacion.create({
       data: {
         empleado_id: empleado.id,

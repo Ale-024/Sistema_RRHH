@@ -104,9 +104,19 @@ async function crearBaseTemporal() {
     ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],
   };
 
+  // Niveles de autoridad del Anexo (deben coincidir con catalogo-iam).
+  const NIVELES_AUTORIDAD = {
+    EMPLEADO: 10,
+    ENCUESTADOR: 10,
+    RRHH_SUP: 50,
+    GERENTE_DEPTO: 30,
+    DIRECCION: 90,
+    ADMIN_TI: 50,
+  };
+
   for (const [codigoRol, lista] of Object.entries(MATRIZ)) {
     const rol = await prisma.rol.create({
-      data: { codigo: codigoRol, nombre: codigoRol },
+      data: { codigo: codigoRol, nombre: codigoRol, nivelAutoridad: NIVELES_AUTORIDAD[codigoRol] ?? 10 },
     });
     for (const codigoPermiso of lista) {
       const permiso = await prisma.permisoSistema.findUnique({ where: { codigo: codigoPermiso } });
