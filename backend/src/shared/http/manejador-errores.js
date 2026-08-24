@@ -32,7 +32,7 @@ function mapear(err) {
     };
   }
 
-  const dominioSql = ['SALDO_VACACIONES_INSUFICIENTE', 'SALDO_VACACIONES_EXCEDIDO', 'VACACION_SOLAPADA', 'VACACION_TRANSICION_INVALIDA', 'VACACION_RANGO_INVALIDO'];
+  const dominioSql = ['SALDO_VACACIONES_INSUFICIENTE', 'SALDO_VACACIONES_EXCEDIDO', 'VACACION_SOLAPADA', 'VACACION_TRANSICION_INVALIDA', 'VACACION_RANGO_INVALIDO', 'PLANILLA_CERRADA_INMUTABLE', 'DETALLE_PLANILLA_INMUTABLE', 'LINEA_PLANILLA_INMUTABLE', 'DESCUADRE_DETALLE_PLANILLA', 'PLANILLA_TRANSICION_INVALIDA'];
   const codigoSql = dominioSql.find((codigo) => String(err.message ?? '').includes(codigo));
   if (codigoSql) {
     return {
@@ -64,6 +64,11 @@ function tituloPorCodigo(codigo) {
     SALDO_VACACIONES_EXCEDIDO: 'Saldo vacacional excedido',
     VACACION_SOLAPADA: 'Solicitud vacacional solapada',
     VACACION_TRANSICION_INVALIDA: 'Transicion de vacaciones invalida',
+    PLANILLA_CERRADA_INMUTABLE: 'Planilla cerrada inmutable',
+    DETALLE_PLANILLA_INMUTABLE: 'Detalle de planilla inmutable',
+    LINEA_PLANILLA_INMUTABLE: 'Linea de planilla inmutable',
+    DESCUADRE_DETALLE_PLANILLA: 'Descuadre de planilla',
+    PLANILLA_TRANSICION_INVALIDA: 'Transicion de planilla invalida',
   };
   return titulos[codigo] ?? 'Solicitud rechazada';
 }

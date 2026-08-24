@@ -31,6 +31,7 @@ function crearApp(ctx) {
   registrarSuscriptores(c.bus, c.prisma);
   permisos.registrarSuscriptores(c.bus, c.prisma);
   vacaciones.registrarSuscriptores(c.bus, c.prisma);
+  planilla.registrarSuscriptores(c.bus, c.prisma);
 
   const app = express();
   app.locals.prisma = c.prisma;

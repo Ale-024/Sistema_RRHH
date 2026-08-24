@@ -145,6 +145,7 @@ model Empleado {
   contratos              Contrato[]
   historial              HistorialLaboral[]
   documentos             DocumentoEmpleado[]
+  detallesPlanilla       DetallePlanilla[]
 
   @@index([estadoLaboral])
 }
@@ -479,6 +480,97 @@ model Nomina {
   salario_bruto  Decimal
   deducciones    Decimal
   salario_neto   Decimal
+}
+
+// ════════════════════════ PLANILLA (CU05) ════════════════════════
+
+/// Catalogo de ingresos, deducciones y aportes; las formulas viven en el
+/// motor puro y los parametros legales versionados viven en ParametroLegal.
+model Concepto {
+  id           Int     @id @default(autoincrement())
+  codigo       String  @unique
+  nombre       String
+  tipo         String // INGRESO | DEDUCCION | APORTE_PATRONAL | INFORMATIVO
+  gravableIsr  Boolean @default(true)
+  afectaIhss   Boolean @default(true)
+  formulaClave String?
+  orden        Int     @default(0)
+  activo       Boolean @default(true)
+
+  lineas LineaConcepto[]
+}
+
+/// Periodo calculable y cerrable. Los importes se almacenan en centavos.
+model PeriodoPlanilla {
+  id                         Int       @id @default(autoincrement())
+  codigo                     String    @unique
+  tipo                       String // ORDINARIA | DECIMO_TERCERO | DECIMO_CUARTO | AJUSTE | LIQUIDACION
+  periodicidad               String
+  fechaInicio                DateTime
+  fechaFin                   DateTime
+  fechaPago                  DateTime
+  estado                     String    @default("BORRADOR") // BORRADOR | CALCULADA | EN_APROBACION | CERRADA | PAGADA
+  periodoAjusteDeId          Int?
+  totalBrutoCent             Int       @default(0)
+  totalDeduccionesCent       Int       @default(0)
+  totalNetoCent              Int       @default(0)
+  totalAportesPatronalesCent Int       @default(0)
+  calculadoPor               Int?
+  calculadoEn                DateTime?
+  errorCalculo               String?
+  cerradoPor                 Int?
+  cerradoEn                  DateTime?
+  hashCierre                 String?
+  pagadoPor                  Int?
+  pagadoEn                   DateTime?
+  creadoEn                   DateTime  @default(now())
+
+  periodoAjusteDe PeriodoPlanilla?  @relation("PlanillaAjustes", fields: [periodoAjusteDeId], references: [id], onDelete: Restrict)
+  ajustes         PeriodoPlanilla[] @relation("PlanillaAjustes")
+  detalles        DetallePlanilla[]
+
+  @@index([estado, fechaPago])
+  @@index([fechaInicio, fechaFin])
+}
+
+/// Contexto congelado del empleado/contrato/parametros para reproducibilidad.
+model DetallePlanilla {
+  id                         Int      @id @default(autoincrement())
+  periodoId                  Int
+  empleadoId                 Int
+  contratoSnapshot           String
+  parametrosSnapshot         String
+  diasTrabajados             Float
+  horasExtra                 Float    @default(0)
+  totalIngresosCent          Int
+  totalDeduccionesCent       Int
+  totalAportesPatronalesCent Int      @default(0)
+  netoPagarCent              Int
+  reciboRuta                 String?
+  creadoEn                   DateTime @default(now())
+
+  periodo  PeriodoPlanilla @relation(fields: [periodoId], references: [id], onDelete: Cascade)
+  empleado Empleado        @relation(fields: [empleadoId], references: [id], onDelete: Restrict)
+  lineas   LineaConcepto[]
+
+  @@unique([periodoId, empleadoId])
+  @@index([empleadoId])
+}
+
+/// Trazabilidad línea por línea: fórmula, base, parámetros y redondeo.
+model LineaConcepto {
+  id              Int    @id @default(autoincrement())
+  detalleId       Int
+  conceptoId      Int
+  baseCalculoCent Int
+  cantidad        Float?
+  montoCent       Int
+  detalleCalculo  String
+
+  detalle  DetallePlanilla @relation(fields: [detalleId], references: [id], onDelete: Cascade)
+  concepto Concepto        @relation(fields: [conceptoId], references: [id], onDelete: Restrict)
+
+  @@index([detalleId])
 }
 
 // ═════════════════ NOTIFICACIONES Y AUDITORÍA ═════════════════

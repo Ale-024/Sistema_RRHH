@@ -37,6 +37,7 @@ export default function Layout() {
     { name: 'Solicitudes', path: '/admin/requests', icon: FileText, permiso: 'solicitudes:revisar' },
     { name: 'Vacaciones', path: '/admin/vacations', icon: CalendarDays, permiso: 'vacaciones:aprobar' },
     { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permiso: 'planilla:leer_global' },
+    { name: 'Parámetros legales', path: '/admin/parameters', icon: Receipt, permiso: 'parametros:leer' },
     { name: 'Usuarios', path: '/admin/usuarios', icon: Shield, permiso: 'usuarios:administrar' },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
@@ -46,6 +47,7 @@ export default function Layout() {
     { name: 'Asistencia', path: '/employee/attendance', icon: CalendarClock },
     { name: 'Mis Solicitudes', path: '/employee/requests', icon: FileText },
     { name: 'Vacaciones', path: '/employee/vacations', icon: CalendarDays, permiso: 'vacaciones:leer' },
+    { name: 'Mis recibos', path: '/employee/payroll', icon: Receipt, permiso: 'planilla:leer' },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
   const links = esRolAdministrativo(user) ? adminLinks : employeeLinks;
