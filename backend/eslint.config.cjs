@@ -31,7 +31,7 @@ module.exports = [
   },
   {
     // Las pruebas usan ESM (vitest) y los globals del runner.
-    files: ['tests/**/*.test.js'],
+    files: ['tests/**/*.test.js', 'tests/helpers/login-con-mfa.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

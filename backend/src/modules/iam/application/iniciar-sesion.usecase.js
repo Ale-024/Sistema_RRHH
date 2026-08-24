@@ -25,6 +25,19 @@ function sha256(texto) {
   return crypto.createHash('sha256').update(texto).digest('hex');
 }
 
+function emitirAccessToken(usuario, mfaSetup = false) {
+  return jwt.sign(
+    {
+      id: usuario.id,
+      empleado_id: usuario.empleado?.id,
+      roles: usuario.roles.map((r) => r.rol.codigo),
+      ...(mfaSetup ? { mfa_setup: true } : {}),
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: mfaSetup ? '5m' : '15m' }
+  );
+}
+
 /**
  * Emite un refresh token opaco: se guarda solo su hash.
  */
@@ -96,7 +109,25 @@ async function iniciarSesion(datos, ctx) {
   const passwordValida = await bcrypt.compare(password, usuario.password_hash);
   if (!passwordValida) return fallido();
 
-  if (usuarioRequiereMfa(usuario) && usuario.mfaSecret && !usuario.mfaSecret.startsWith('PENDING:')) {
+  const requiereMfa = usuarioRequiereMfa(usuario);
+  const mfaActivo = usuario.mfaSecret && !usuario.mfaSecret.startsWith('PENDING:');
+  if (requiereMfa && !mfaActivo) {
+    return {
+      token: emitirAccessToken(usuario, true),
+      mfaSetupRequired: true,
+      user: {
+        id: usuario.id,
+        email: usuario.email,
+        rol: rolPrimario(usuario.roles.map((r) => r.rol.codigo), PRIORIDAD_ROLES),
+        nombres: usuario.empleado?.nombres,
+        apellidos: usuario.empleado?.apellidos,
+        debeCambiarPassword: usuario.debeCambiarPassword,
+        permisos: permisosDeUsuario(usuario),
+      },
+    };
+  }
+
+  if (requiereMfa && mfaActivo) {
     if (!datos.otp || !verificarCodigoTotp(usuario.mfaSecret, datos.otp, clock.ahora().getTime())) {
       throw new ErrorAplicacion('MFA_REQUERIDO', 401, 'Debe proporcionar un codigo TOTP valido.');
     }
@@ -105,11 +136,7 @@ async function iniciarSesion(datos, ctx) {
   const permisos = permisosDeUsuario(usuario);
   const codigoRol = rolPrimario(usuario.roles.map((r) => r.rol.codigo), PRIORIDAD_ROLES);
 
-  const accessToken = jwt.sign(
-    { id: usuario.id, empleado_id: usuario.empleado?.id, roles: usuario.roles.map((r) => r.rol.codigo) },
-    process.env.JWT_SECRET,
-    { expiresIn: '15m' }
-  );
+  const accessToken = emitirAccessToken(usuario);
 
   // La escritura de sesion y el reinicio de intentos van en una transaccion corta.
   const refreshToken = await prisma.$transaction(async (tx) => {

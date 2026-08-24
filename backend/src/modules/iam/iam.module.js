@@ -5,11 +5,12 @@
  */
 const { rutasAuth } = require('./routes/auth.routes');
 const { rutasAdminUsuarios } = require('./routes/usuarios.routes');
-const { verificarToken, cargarPermisos } = require('./application/autenticacion');
+const { verificarToken, cargarPermisos, exigirMfaCompletado } = require('./application/autenticacion');
 
 module.exports = {
   rutasAuth,
   rutasAdminUsuarios,
   verificarToken,
   cargarPermisos,
+  exigirMfaCompletado,
 };

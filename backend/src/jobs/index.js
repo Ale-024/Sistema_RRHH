@@ -44,6 +44,35 @@ function registrarTareasProgramadas(ctx, cron) {
       logJson('error', 'fallo_proyecciones', { error: error.message, duracionMs });
     }
   });
+  cron.schedule('30 23 * * *', async () => {
+    const inicio = Date.now();
+    try {
+      const { respaldar } = require('../../scripts/respaldar');
+      const resultado = respaldar({ databaseUrl: ctx.entorno.DATABASE_URL, directorio: process.env.BACKUP_RUTA });
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'respaldo', duracionMs);
+      logJson('info', 'respaldo_completado', { ...resultado, duracionMs });
+    } catch (error) {
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'respaldo', duracionMs, error);
+      logJson('error', 'fallo_respaldo', { error: error.message, duracionMs });
+    }
+  });
+  cron.schedule('0 * * * *', async () => {
+    const inicio = Date.now();
+    try {
+      const { revisar, notificarPorCorreo } = require('../../scripts/alertar-operacion');
+      const resultado = revisar();
+      const notificacion = await notificarPorCorreo(resultado);
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'alertas_operativas', duracionMs, resultado.ok ? null : new Error('Se detectaron alertas operativas'));
+      logJson(resultado.ok ? 'info' : 'error', 'alerta_operativa', { ...resultado, notificacion, duracionMs });
+    } catch (error) {
+      const duracionMs = Date.now() - inicio;
+      registrarTarea(ctx.metrics, 'alertas_operativas', duracionMs, error);
+      logJson('error', 'fallo_alertas_operativas', { error: error.message, duracionMs });
+    }
+  });
 }
 
 module.exports = { registrarTareasProgramadas };

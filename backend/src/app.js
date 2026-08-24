@@ -52,6 +52,7 @@ function crearApp(ctx) {
   routerEmpleado.use(
     iam.verificarToken,
     iam.cargarPermisos,
+    iam.exigirMfaCompletado,
     ...[
       empleados.rutasEmpleado,
       asistencia.rutasEmpleado,
@@ -66,7 +67,7 @@ function crearApp(ctx) {
   // Cada ruta exige el suyo mediante exigirPermiso; los modulos
   // usuarios y auditoria montan su propia guardia especializada.
   const routerAdmin = express.Router();
-  routerAdmin.use(iam.verificarToken, iam.cargarPermisos);
+  routerAdmin.use(iam.verificarToken, iam.cargarPermisos, iam.exigirMfaCompletado);
   routerAdmin.use(empleados.rutasAdminEmpleados(c));
   routerAdmin.use(organizacion.rutasAdminOrganizacion(c));
   routerAdmin.use(asistencia.rutasAdmin(c));
@@ -81,7 +82,7 @@ function crearApp(ctx) {
   app.use('/api/employee', routerEmpleado);
   app.use('/api/admin', routerAdmin);
   const routerV1Reportes = express.Router();
-  routerV1Reportes.use(iam.verificarToken, iam.cargarPermisos, reportes.rutasReportes(c));
+  routerV1Reportes.use(iam.verificarToken, iam.cargarPermisos, iam.exigirMfaCompletado, reportes.rutasReportes(c));
   app.use('/v1/reportes', routerV1Reportes);
   app.get(['/api/salud', '/v1/salud'], async (_req, res) => {
     try {
@@ -91,8 +92,8 @@ function crearApp(ctx) {
       res.status(503).json({ status: 'degraded', database: 'unavailable' });
     }
   });
-  app.get('/api/metricas', iam.verificarToken, iam.cargarPermisos, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
-  app.get('/v1/metricas', iam.verificarToken, iam.cargarPermisos, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
+  app.get('/api/metricas', iam.verificarToken, iam.cargarPermisos, iam.exigirMfaCompletado, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
+  app.get('/v1/metricas', iam.verificarToken, iam.cargarPermisos, iam.exigirMfaCompletado, exigirPermiso('observabilidad:leer'), (_req, res) => res.json(snapshotMetricas(app.locals.metrics)));
 
   app.use(noEncontrado);
   app.use(manejadorErrores);

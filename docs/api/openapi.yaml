@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: SIRH-MKT API
+  version: 1.0.0
+  description: API de recursos humanos, planilla, reportes y operación.
+servers:
+  - url: /api
+paths:
+  /salud:
+    get:
+      summary: Estado de salud de la API y base de datos
+      responses:
+        '200': { description: Servicio disponible }
+        '503': { description: Base de datos no disponible }
+  /metricas:
+    get:
+      summary: Métricas operativas
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Métricas agregadas en memoria }
+        '403': { description: Permiso observabilidad:leer requerido }
+  /auth/login:
+    post:
+      summary: Inicio de sesión y enrolamiento MFA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200': { description: Sesión iniciada o token limitado de enrolamiento }
+        '401': { description: Credenciales o TOTP inválido }
+  /auth/mfa/setup:
+    post:
+      summary: Genera secreto TOTP para enrolamiento inicial
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Secreto y URI otpauth }
+  /auth/mfa/verify:
+    post:
+      summary: Confirma el enrolamiento TOTP
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, pattern: '^[0-9]{6}$' }
+      responses:
+        '200': { description: MFA activado }
+        '401': { description: Código inválido }
+  /admin/reportes/asistencia:
+    get:
+      summary: Reporte mensual de asistencia
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Anio' }, { $ref: '#/components/parameters/Mes' }, { $ref: '#/components/parameters/Formato' }]
+      responses: { '200': { description: JSON, XLSX o PDF según formato } }
+  /admin/reportes/ausentismo:
+    get:
+      summary: Índice de ausentismo por departamento
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Anio' }, { $ref: '#/components/parameters/Mes' }, { $ref: '#/components/parameters/Formato' }]
+      responses: { '200': { description: Reporte generado } }
+  /admin/reportes/personal-por-proyecto:
+    get:
+      summary: Personal asignado por proyecto
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Anio' }, { $ref: '#/components/parameters/Formato' }]
+      responses: { '200': { description: Reporte generado } }
+  /admin/reportes/costo-planilla:
+    get:
+      summary: Costo mensual de planilla
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Anio' }, { $ref: '#/components/parameters/Mes' }, { $ref: '#/components/parameters/Formato' }]
+      responses:
+        '200': { description: Reporte generado }
+        '403': { description: Solo Dirección }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Anio: { name: anio, in: query, required: false, schema: { type: integer, minimum: 2000, maximum: 2200 } }
+    Mes: { name: mes, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 12 } }
+    Formato: { name: formato, in: query, required: false, schema: { type: string, enum: [json, xlsx, pdf], default: json } }
+  schemas:
+    Login:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        otp: { type: string, pattern: '^[0-9]{6}$' }

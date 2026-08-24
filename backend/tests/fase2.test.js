@@ -4,6 +4,7 @@ import BusEventos from '../src/shared/event-bus';
 import reloj from '../src/shared/reloj';
 import { crearApp } from '../src/app';
 import { crearBaseTemporal } from './helpers/db-temporal';
+import { loginConMfa } from './helpers/login-con-mfa';
 
 /**
  * Pruebas de seguridad y reglas de la Fase 2 (criterios de finalizacion):
@@ -18,10 +19,7 @@ let prisma;
 const CLAVE = Buffer.alloc(32, 7).toString('base64');
 
 async function login(email) {
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email, password: 'clave12345' });
-  return res.body.token;
+  return loginConMfa(app, email);
 }
 
 beforeAll(async () => {

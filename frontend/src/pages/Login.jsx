@@ -8,10 +8,14 @@ import { esRolAdministrativo } from '../shared/roles';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [requiereOtp, setRequiereOtp] = useState(false);
+  const [mfaSetup, setMfaSetup] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const setToken = useAuthStore((state) => state.setToken);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,8 +23,20 @@ export default function Login() {
     setError('');
     
     try {
-      const res = await api.post('/auth/login', { email, password });
+      if (mfaSetup) {
+        await api.post('/auth/mfa/verify', { code: otp });
+      }
+      const res = await api.post('/auth/login', { email, password, ...(otp ? { otp } : {}) });
+      if (res.data.mfaSetupRequired) {
+        setToken(res.data.token);
+        const setup = await api.post('/auth/mfa/setup');
+        setMfaSetup({ secret: setup.data.secret });
+        setError('Configure su aplicación autenticadora y confirme el código.');
+        return;
+      }
       login(res.data.user, res.data.token);
+      setMfaSetup(null);
+      setRequiereOtp(false);
 
       if (res.data.user.debeCambiarPassword) {
         navigate('/employee/profile', {
@@ -30,6 +46,7 @@ export default function Login() {
       }
       navigate(esRolAdministrativo(res.data.user) ? '/admin' : '/employee');
     } catch (err) {
+      if (err.response?.data?.type?.endsWith('/mfa-requerido')) setRequiereOtp(true);
       setError(err.response?.data?.message || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
@@ -74,6 +91,26 @@ export default function Login() {
               </div>
             </div>
 
+            {(requiereOtp || mfaSetup) && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Código de autenticación
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  className="block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-brand-blue focus:border-brand-blue sm:text-sm"
+                  placeholder="000000"
+                />
+                {mfaSetup && <p className="text-xs text-slate-500 mt-2 break-all">Secreto TOTP: {mfaSetup.secret}</p>}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Contraseña
@@ -101,7 +138,7 @@ export default function Login() {
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                'Iniciar Sesión'
+                mfaSetup ? 'Activar MFA e iniciar sesión' : 'Iniciar Sesión'
               )}
             </button>
           </form>

@@ -63,4 +63,11 @@ async function cargarPermisos(req, _res, next) {
   }
 }
 
-module.exports = { verificarToken, cargarPermisos };
+function exigirMfaCompletado(req, _res, next) {
+  if (req.user?.mfa_setup) {
+    return next(new ErrorAplicacion('MFA_REQUERIDO', 403, 'Debe completar la configuracion MFA antes de acceder al sistema.'));
+  }
+  next();
+}
+
+module.exports = { verificarToken, cargarPermisos, exigirMfaCompletado };

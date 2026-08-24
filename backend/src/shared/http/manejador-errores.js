@@ -70,8 +70,10 @@ function tituloPorCodigo(codigo) {
     DESCUADRE_DETALLE_PLANILLA: 'Descuadre de planilla',
     PLANILLA_TRANSICION_INVALIDA: 'Transicion de planilla invalida',
     MFA_REQUERIDO: 'Segundo factor requerido',
+    MFA_SETUP_REQUIRED: 'Configuracion MFA requerida',
     MFA_INVALIDO: 'Codigo MFA invalido',
     MFA_NO_APLICA: 'MFA no aplica a este perfil',
+    MFA_YA_CONFIGURADO: 'MFA ya configurado',
   };
   return titulos[codigo] ?? 'Solicitud rechazada';
 }

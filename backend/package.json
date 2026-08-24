@@ -12,6 +12,7 @@
     "seed": "node prisma/seeds/index.js",
     "verify:payroll": "node scripts/verificar-cierre-planilla.js",
     "backup": "node scripts/respaldar.js",
+    "alert": "node scripts/alertar-operacion.js",
     "restore": "node scripts/restaurar.js",
     "test": "vitest run"
   },
@@ -29,6 +30,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "node-cron": "^4.6.0",
+    "nodemailer": "^9.0.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

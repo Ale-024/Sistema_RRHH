@@ -47,6 +47,11 @@ function logJson(nivel, evento, datos = {}) {
   if (process.env.LOG_RUTA) {
     try {
       fs.mkdirSync(path.dirname(process.env.LOG_RUTA), { recursive: true });
+      if (fs.existsSync(process.env.LOG_RUTA) && fs.statSync(process.env.LOG_RUTA).size > 10 * 1024 * 1024) {
+        const anterior = `${process.env.LOG_RUTA}.1`;
+        if (fs.existsSync(anterior)) fs.rmSync(anterior);
+        fs.renameSync(process.env.LOG_RUTA, anterior);
+      }
       fs.appendFileSync(process.env.LOG_RUTA, `${linea}\n`);
     } catch (error) {
       console.error(JSON.stringify({ timestamp: new Date().toISOString(), nivel: 'error', evento: 'fallo_escritura_log', detalle: error.message }));

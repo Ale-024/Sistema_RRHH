@@ -114,7 +114,7 @@ async function buscarEmpleados(texto, contexto, ctx) {
   if (!ids.length) return [];
   return ctx.prisma.empleado.findMany({
     where: { id: { in: ids }, ...((contexto?.permisos?.has('reportes:ver_global') || contexto?.permisos?.has('empleados:leer_global')) ? {} : { puesto: { departamento_id: { in: contexto?.scopeDepartamentos?.length ? contexto.scopeDepartamentos : [-1] } } }) },
-    select: { id: true, nombres: true, apellidos: true, dni: true, puesto: { select: { titulo: true, departamento: true } } },
+    select: { id: true, nombres: true, apellidos: true, puesto: { select: { titulo: true, departamento: true } } },
   });
 }
 

@@ -5,6 +5,7 @@ import reloj from '../src/shared/reloj';
 import { crearApp } from '../src/app';
 import { crearBaseTemporal } from './helpers/db-temporal';
 import { consolidarDia } from '../src/modules/asistencia/application/consolidar-dia.usecase';
+import { loginConMfa } from './helpers/login-con-mfa';
 
 let base;
 let app;
@@ -12,8 +13,7 @@ let prisma;
 let datos;
 
 async function login(email) {
-  const res = await request(app).post('/api/auth/login').send({ email, password: 'clave12345' });
-  return res.body.token;
+  return loginConMfa(app, email);
 }
 
 beforeAll(async () => {

@@ -5,6 +5,7 @@ import reloj from '../src/shared/reloj';
 import { crearApp } from '../src/app';
 import { crearBaseTemporal } from './helpers/db-temporal';
 import { consolidarDia } from '../src/modules/asistencia/application/consolidar-dia.usecase';
+import { loginConMfa } from './helpers/login-con-mfa';
 
 /**
  * Criterios de finalizacion de la Fase 3:
@@ -19,10 +20,7 @@ let datos;
 const CLAVE = Buffer.alloc(32, 7).toString('base64');
 
 async function login(email) {
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email, password: 'clave12345' });
-  return res.body.token;
+  return loginConMfa(app, email);
 }
 
 beforeAll(async () => {
