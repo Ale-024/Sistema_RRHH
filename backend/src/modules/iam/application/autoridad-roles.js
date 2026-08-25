@@ -166,6 +166,28 @@ async function validarEjecucion(prisma, { ejecutorId, beneficiarioId, rolCodigo,
 }
 
 /**
+ * Cambio de rol (REVOCAR con reemplazo): el rol destino debe ser un rol base
+ * (nivel < 30) distinto del que se revoca. La degradacion queda asi definida
+ * por construccion; el destino hereda la decision de DIRECCION del ciclo.
+ */
+function validarRolDestino(rolARevocar, rolDestino) {
+  if (rolDestino.nivelAutoridad >= NIVEL_ELEVADO_MINIMO) {
+    throw new ErrorAplicacion(
+      'ROL_DESTINO_INVALIDO',
+      422,
+      'El nuevo rol debe ser un rol base (Empleado o Encuestador de campo).'
+    );
+  }
+  if (rolDestino.id === rolARevocar.id) {
+    throw new ErrorAplicacion(
+      'ROL_DESTINO_INVALIDO',
+      422,
+      'El nuevo rol no puede ser el mismo que se revoca.'
+    );
+  }
+}
+
+/**
  * Revocacion: invariantes 1 y 7 (continuidad administrativa).
  */
 async function validarRevocacion(prisma, { ejecutorId, beneficiarioId, rolId }) {
@@ -201,6 +223,7 @@ module.exports = {
   VIGENCIA_AUTORIZACION_DIAS,
   validarSolicitud,
   validarDecision,
+  validarRolDestino,
   validarEjecucion,
   validarRevocacion,
 };

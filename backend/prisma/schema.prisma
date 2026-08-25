@@ -81,6 +81,8 @@ model AutorizacionRol {
     id                  Int       @id @default(autoincrement())
     beneficiarioId      Int
     rolId               Int
+    /// REVOCAR con reemplazo: rol base que quedara tras ejecutar el cambio.
+    rolDestinoId        Int?
     scopeDepartamentoId Int?
     /// OTORGAR | REVOCAR: el ciclo simetrico para quitar roles elevados.
     accion              String    @default("OTORGAR")

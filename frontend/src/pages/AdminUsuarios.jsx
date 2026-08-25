@@ -142,11 +142,18 @@ export default function AdminUsuarios() {
     }
   };
 
-  // Ejecuta la autorizacion: OTORGAR asigna el rol; REVOCAR lo retira.
+  // Ejecuta la autorizacion: OTORGAR asigna el rol; REVOCAR lo retira o,
+  // si trae rol destino, aplica el cambio completo en un solo acto.
   const ejecutarAutorizacion = async (aut) => {
     setProcesando(`${aut.id}:ejecutar`);
     try {
-      if (aut.accion === 'REVOCAR') {
+      if (aut.accion === 'REVOCAR' && aut.rolDestino?.codigo) {
+        await api.put(`/admin/usuarios/${aut.beneficiarioId}/roles`, {
+          rolCodigo: aut.rolDestino.codigo,
+          autorizacionId: aut.id,
+        });
+        notificar('success', `Cambio aplicado: ${aut.rol?.nombre} → ${aut.rolDestino.nombre} a ${aut.beneficiario?.email ?? aut.beneficiarioId}.`);
+      } else if (aut.accion === 'REVOCAR') {
         await api.delete(`/admin/usuarios/${aut.beneficiarioId}/roles/${aut.rolId}`, {
           data: { autorizacionId: aut.id },
         });
@@ -173,7 +180,7 @@ export default function AdminUsuarios() {
   const [enviandoSolicitud, setEnviandoSolicitud] = useState(false);
 
   const abrirSolicitud = async () => {
-    setFormSolicitud({ accion: 'OTORGAR', rolCodigo: rolesSolicitables[0] ?? '', beneficiarioId: '', email: '', scopeDepartamentoId: '', motivo: '' });
+    setFormSolicitud({ accion: 'OTORGAR', rolCodigo: rolesSolicitables[0] ?? '', rolDestinoCodigo: '', beneficiarioId: '', email: '', scopeDepartamentoId: '', motivo: '' });
     // Fuente de beneficiarios segun lo que el rol puede listar.
     try {
       if (tienePermiso(user, 'usuarios:administrar')) {
@@ -203,6 +210,7 @@ export default function AdminUsuarios() {
     setFormSolicitud({
       accion: 'REVOCAR',
       rolCodigo,
+      rolDestinoCodigo: '',
       beneficiarioId: String(u.id),
       email: u.email ?? '',
       scopeDepartamentoId: '',
@@ -217,6 +225,9 @@ export default function AdminUsuarios() {
       await api.post('/admin/autorizaciones-rol', {
         accion: formSolicitud.accion,
         rolCodigo: formSolicitud.rolCodigo,
+        ...(formSolicitud.accion === 'REVOCAR' && formSolicitud.rolDestinoCodigo
+          ? { rolDestinoCodigo: formSolicitud.rolDestinoCodigo }
+          : {}),
         ...(formSolicitud.beneficiarioId
           ? { beneficiarioId: Number(formSolicitud.beneficiarioId) }
           : { email: formSolicitud.email.trim().toLowerCase() }),
@@ -290,9 +301,16 @@ export default function AdminUsuarios() {
                   <tr key={a.id} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <td className="px-6 py-3 font-medium text-slate-900 dark:text-slate-100">{a.beneficiario?.email || `Usuario ${a.beneficiarioId}`}</td>
                     <td className="px-6 py-3">
-                      <span className={a.accion === 'REVOCAR' ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
-                        {a.accion === 'REVOCAR' ? 'Revocar: ' : ''}{a.rol?.nombre || a.rolId}
-                      </span>
+                      {a.accion === 'REVOCAR' ? (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          Revocar: {a.rol?.nombre || a.rolId}
+                          {a.rolDestino && (
+                            <span className="text-slate-500 dark:text-slate-400"> → {a.rolDestino.nombre}</span>
+                          )}
+                        </span>
+                      ) : (
+                        a.rol?.nombre || a.rolId
+                      )}
                     </td>
                     <td className="px-6 py-3 text-xs">{a.departamento ? a.departamento.nombre : 'Global'}</td>
                     <td className="px-6 py-3">
@@ -333,7 +351,7 @@ export default function AdminUsuarios() {
                           disabled={Boolean(procesando)}
                           className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100 disabled:opacity-50"
                         >
-                          <UserCog className="w-3.5 h-3.5 mr-1" /> Ejecutar asignación
+                          <UserCog className="w-3.5 h-3.5 mr-1" /> {a.accion === 'REVOCAR' ? 'Ejecutar revocación' : 'Ejecutar asignación'}
                         </button>
                       ) : a.estado === 'CONSUMIDA' || a.consumidaEn ? (
                         <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
@@ -483,7 +501,9 @@ export default function AdminUsuarios() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rol a otorgar</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  {formSolicitud.accion === 'REVOCAR' ? 'Rol a revocar' : 'Rol a otorgar'}
+                </label>
                 <select
                   required
                   value={formSolicitud.rolCodigo}
@@ -495,6 +515,24 @@ export default function AdminUsuarios() {
                   ))}
                 </select>
               </div>
+
+              {formSolicitud.accion === 'REVOCAR' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nuevo rol del beneficiario</label>
+                  <select
+                    value={formSolicitud.rolDestinoCodigo}
+                    onChange={(e) => setFormSolicitud({ ...formSolicitud, rolDestinoCodigo: e.target.value })}
+                    className="w-full p-2.5 bg-white dark:bg-slate-900/40 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="">Sin reemplazo (solo revocar)</option>
+                    <option value="EMPLEADO">{NOMBRES_ROL.EMPLEADO}</option>
+                    <option value="ENCUESTADOR">{NOMBRES_ROL.ENCUESTADOR}</option>
+                  </select>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Si eliges un nuevo rol, la ejecución reemplaza el rol actual en un solo paso (degradación).
+                  </p>
+                </div>
+              )}
 
               {tienePermiso(user, 'usuarios:administrar') || tienePermiso(user, 'empleados:leer') ? (
                 <div>

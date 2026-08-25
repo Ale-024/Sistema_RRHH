@@ -3,6 +3,7 @@ const {
   VIGENCIA_AUTORIZACION_DIAS,
   validarSolicitud,
   validarDecision,
+  validarRolDestino,
   validarEjecucion,
   validarRevocacion,
 } = require('./autoridad-roles');
@@ -61,17 +62,22 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
 
   // La degradacion exige autorizacion previa de DIRECCION con el mismo doble
   // control del otorgamiento (autorizador != ejecutor != beneficiario).
+  // Acepta tanto la autorizacion OTORGAR del rol destino como la autorizacion
+  // combinada REVOCAR (rol actual) con rolDestinoId = rol destino.
   let autorizacionDegradacion = null;
   if (esDegradacion) {
     autorizacionDegradacion = autorizacionId
       ? await prisma.autorizacionRol.findUnique({ where: { id: autorizacionId } })
       : null;
-    const valida =
+    const corresponde =
       autorizacionDegradacion &&
+      (autorizacionDegradacion.rolId === rol.id ||
+        (autorizacionDegradacion.accion === 'REVOCAR' && autorizacionDegradacion.rolDestinoId === rol.id));
+    const valida =
+      corresponde &&
       autorizacionDegradacion.estado === 'AUTORIZADA' &&
       !autorizacionDegradacion.consumidaEn &&
       autorizacionDegradacion.beneficiarioId === usuarioId &&
-      autorizacionDegradacion.rolId === rol.id &&
       (!autorizacionDegradacion.venceEn || autorizacionDegradacion.venceEn > new Date()) &&
       autorizacionDegradacion.autorizadaPorId != null &&
       autorizacionDegradacion.autorizadaPorId !== ejecutor.id &&
@@ -176,7 +182,7 @@ async function quitarRol(usuarioId, rolId, ctx) {
  * EMPLEADO/ENCUESTADOR: RRHH_SUP. RRHH_SUP: DIRECCION. ADMIN_TI: otro ADMIN_TI.
  * GERENTE_DEPTO: RRHH_SUP. DIRECCION: otro DIRECCION.
  */
-async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion = 'OTORGAR', scopeDepartamentoId, motivo }, ctx) {
+async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion = 'OTORGAR', rolDestinoCodigo, scopeDepartamentoId, motivo }, ctx) {
     const { prisma, ejecutor } = ctx;
     if (!ejecutor?.id || !Array.isArray(ejecutor.roles)) {
       throw new ErrorAplicacion('EJECUTOR_AUSENTE', 500, 'Sesion sin roles identificables.');
@@ -216,6 +222,16 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion 
       }
     }
 
+    // REVOCAR con reemplazo (cambio/degradacion de rol en un solo acto):
+    // el destino debe ser un rol base distinto del revocado.
+    let rolDestinoId = null;
+    if (accion === 'REVOCAR' && rolDestinoCodigo) {
+      const rolDestino = await prisma.rol.findUnique({ where: { codigo: rolDestinoCodigo } });
+      if (!rolDestino) throw new ErrorAplicacion('ROL_INVALIDO', 422, 'El nuevo rol indicado no existe.');
+      validarRolDestino(rol, rolDestino);
+      rolDestinoId = rolDestino.id;
+    }
+
     const yaVigente = await prisma.autorizacionRol.findFirst({
       where: { beneficiarioId: beneficiario.id, rolId: rol.id, accion, estado: 'AUTORIZADA', consumidaEn: null },
     });
@@ -232,6 +248,7 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion 
     data: {
       beneficiarioId: beneficiario.id,
       rolId: rol.id,
+      rolDestinoId,
       accion,
       scopeDepartamentoId: scopeDepartamentoId ?? null,
       solicitadaPorId: ejecutor.id,
@@ -241,7 +258,10 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion 
   });
 
   return {
-    message: `${accion === 'REVOCAR' ? 'Revocacion' : 'Solicitud'} de rol ${rolCodigo} registrada.`,
+    message:
+      accion === 'REVOCAR'
+        ? `Revocacion de rol ${rolCodigo}${rolDestinoId ? ` con cambio a ${rolDestinoCodigo}` : ''} registrada.`
+        : `Solicitud de rol ${rolCodigo} registrada.`,
     data: { id: solicitud.id, venceEn },
   };
 }
@@ -288,6 +308,8 @@ async function listarAutorizaciones(ctx) {
       estado: true,
       beneficiarioId: true,
       rolId: true,
+      rolDestinoId: true,
+      accion: true,
       scopeDepartamentoId: true,
       solicitadaPorId: true,
       autorizadaPorId: true,
@@ -310,6 +332,7 @@ async function listarAutorizaciones(ctx) {
   return filas.map((f) => ({
     ...f,
     rol: rolPorId.get(f.rolId) || null,
+    rolDestino: f.rolDestinoId ? rolPorId.get(f.rolDestinoId) || null : null,
     beneficiario: usuarioPorId.get(f.beneficiarioId) || null,
     autorizadaPor: f.autorizadaPorId ? usuarioPorId.get(f.autorizadaPorId) || null : null,
     departamento: f.scopeDepartamentoId ? deptoPorId.get(f.scopeDepartamentoId) || null : null,

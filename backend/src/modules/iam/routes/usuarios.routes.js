@@ -28,6 +28,8 @@ const esquemaSolicitud = z.object({
   rolCodigo: z.string().min(2).max(30),
   // OTORGAR (default) | REVOCAR: ciclo simetrico para quitar roles elevados.
   accion: z.enum(['OTORGAR', 'REVOCAR']).default('OTORGAR'),
+  // REVOCAR con reemplazo: rol base que quedara tras ejecutar el cambio.
+  rolDestinoCodigo: z.string().trim().min(2).max(30).optional(),
   scopeDepartamentoId: z.coerce.number().int().positive().optional(),
   motivo: z.string().trim().max(500).optional(),
 });
