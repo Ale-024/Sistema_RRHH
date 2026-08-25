@@ -107,8 +107,10 @@ async function devengarVacaciones({ prisma, fecha = new Date(), empleadoId = nul
           create: {
             empleadoId: empleado.id,
             anioServicio: anio,
-            desde: aniversario(empleado.fecha_ingreso, anio - 1),
-            hasta: aniversario(empleado.fecha_ingreso, anio),
+            // Ventana de goce: los 12 meses SIGUIENTES al aniversario; el
+            // derecho se disfruta despues de cumplido el ano de servicio.
+            desde: aniversario(empleado.fecha_ingreso, anio),
+            hasta: aniversario(empleado.fecha_ingreso, anio + 1),
             diasDerecho: derecho,
           },
         });
@@ -146,12 +148,31 @@ async function obtenerSaldo(tx, periodoId) {
 }
 
 async function crearSolicitudVacacion({ prisma, empleadoId, usuarioId, datos, ip }) {
-  const fechaInicio = inicioDelDia(datos.fechaInicio);
-  const fechaFin = inicioDelDia(datos.fechaFin);
-  validarRango(fechaInicio, fechaFin);
-  const dias = diasHabilesEntre(fechaInicio, fechaFin);
-  if (dias < 1) throw new ErrorAplicacion('RANGO_SIN_DIAS_HABILES', 422, 'El rango no contiene dias habiles.');
+    const fechaInicio = inicioDelDia(datos.fechaInicio);
+    const fechaFin = inicioDelDia(datos.fechaFin);
+    validarRango(fechaInicio, fechaFin);
+    const dias = diasHabilesEntre(fechaInicio, fechaFin);
+    if (dias < 1) throw new ErrorAplicacion('RANGO_SIN_DIAS_HABILES', 422, 'El rango no contiene dias habiles.');
 
+    // Doble clic / reenvio accidental: borrador identico pendiente lo bloquea.
+    const duplicado = await prisma.solicitudVacacion.findFirst({
+      where: {
+        empleadoId,
+        periodoId: datos.periodoId,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        estado: 'SOLICITADO',
+      },
+      select: { id: true, folio: true },
+    });
+    if (duplicado) {
+      throw new ErrorAplicacion(
+        'SOLICITUD_DUPLICADA',
+        409,
+        `Ya existe una solicitud identica en borrador (${duplicado.folio}). Enviala o cancelala primero.`
+      );
+    }
+  
   return prisma.$transaction(async (tx) => {
     const periodo = await tx.periodoVacacional.findFirst({
       where: {

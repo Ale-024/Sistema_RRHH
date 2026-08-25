@@ -473,7 +473,8 @@ model ParametroLegal {
 }
 
 /// Un periodo por año de servicio cumplido; el derecho es un snapshot del
-/// parámetro legal vigente al momento del devengo.
+/// parámetro legal vigente al momento del devengo. La ventana [desde, hasta]
+/// son los 12 meses siguientes al aniversario, cuando el goce puede usarse.
 model PeriodoVacacional {
   id           Int      @id @default(autoincrement())
   empleadoId   Int

@@ -63,7 +63,7 @@ describe('Fase 5: vacaciones', () => {
     const empleadoToken = await login('empleado-f5@test.hn');
     const rrhhToken = await login('rrhh-f5@test.hn');
     const periodo = await prisma.periodoVacacional.findFirst({ where: { empleadoId: datos.empleado.empleado.id, anioServicio: 4 } });
-    const creada = await request(app).post('/api/employee/vacaciones/solicitudes').set('Authorization', `Bearer ${empleadoToken}`).send({ periodoId: periodo.id, fechaInicio: '2025-02-03', fechaFin: '2025-02-04' });
+    const creada = await request(app).post('/api/employee/vacaciones/solicitudes').set('Authorization', `Bearer ${empleadoToken}`).send({ periodoId: periodo.id, fechaInicio: '2026-02-03', fechaFin: '2026-02-04' });
     expect(creada.status).toBe(201);
     const enviada = await request(app).post(`/api/employee/vacaciones/solicitudes/${creada.body.data.id}/enviar`).set('Authorization', `Bearer ${empleadoToken}`).send({});
     expect(enviada.status).toBe(200);
