@@ -28,6 +28,8 @@ const SOLICITABLES_POR_ROL = {
 };
 // Roles base: no exigen ciclo de autorizacion; TI ejecuta la solicitud directo.
 const ROLES_SIN_CICLO = ['EMPLEADO', 'ENCUESTADOR'];
+// Roles elevados: quitarlos exige el ciclo de revocacion (DIRECCION autoriza).
+const ROLES_ELEVADOS = ['GERENTE_DEPTO', 'RRHH_SUP', 'ADMIN_TI', 'DIRECCION'];
 
 export default function AdminUsuarios() {
   const { user } = useAuthStore();
@@ -140,16 +142,22 @@ export default function AdminUsuarios() {
     }
   };
 
-  // Paso final del anexo: ADMIN_TI ejecuta el otorgamiento citando la
-  // autorizacion AUTORIZADA (inv3); sin ese id el backend rechaza.
+  // Ejecuta la autorizacion: OTORGAR asigna el rol; REVOCAR lo retira.
   const ejecutarAutorizacion = async (aut) => {
     setProcesando(`${aut.id}:ejecutar`);
     try {
-      await api.put(`/admin/usuarios/${aut.beneficiarioId}/roles`, {
-        rolCodigo: aut.rol?.codigo,
-        autorizacionId: aut.id,
-      });
-      notificar('success', `Rol ${aut.rol?.nombre} asignado a ${aut.beneficiario?.email}.`);
+      if (aut.accion === 'REVOCAR') {
+        await api.delete(`/admin/usuarios/${aut.beneficiarioId}/roles/${aut.rolId}`, {
+          data: { autorizacionId: aut.id },
+        });
+        notificar('success', `Rol ${aut.rol?.nombre} retirado a ${aut.beneficiario?.email ?? aut.beneficiarioId}.`);
+      } else {
+        await api.put(`/admin/usuarios/${aut.beneficiarioId}/roles`, {
+          rolCodigo: aut.rol?.codigo,
+          autorizacionId: aut.id,
+        });
+        notificar('success', `Rol ${aut.rol?.nombre} asignado a ${aut.beneficiario?.email ?? aut.beneficiarioId}.`);
+      }
       cargar();
     } catch (error) {
       notificar('error', error.response?.data?.message || 'No se pudo ejecutar la asignación.');
@@ -165,7 +173,7 @@ export default function AdminUsuarios() {
   const [enviandoSolicitud, setEnviandoSolicitud] = useState(false);
 
   const abrirSolicitud = async () => {
-    setFormSolicitud({ rolCodigo: rolesSolicitables[0] ?? '', beneficiarioId: '', email: '', scopeDepartamentoId: '', motivo: '' });
+    setFormSolicitud({ accion: 'OTORGAR', rolCodigo: rolesSolicitables[0] ?? '', beneficiarioId: '', email: '', scopeDepartamentoId: '', motivo: '' });
     // Fuente de beneficiarios segun lo que el rol puede listar.
     try {
       if (tienePermiso(user, 'usuarios:administrar')) {
@@ -190,11 +198,24 @@ export default function AdminUsuarios() {
     }
   };
 
+  // Abrir el modal presetado para REVOCAR un rol elevado especifico.
+  const solicitarRevocacion = (u, rolCodigo) => {
+    setFormSolicitud({
+      accion: 'REVOCAR',
+      rolCodigo,
+      beneficiarioId: String(u.id),
+      email: u.email ?? '',
+      scopeDepartamentoId: '',
+      motivo: '',
+    });
+  };
+
   const enviarSolicitud = async (e) => {
     e.preventDefault();
     setEnviandoSolicitud(true);
     try {
       await api.post('/admin/autorizaciones-rol', {
+        accion: formSolicitud.accion,
         rolCodigo: formSolicitud.rolCodigo,
         ...(formSolicitud.beneficiarioId
           ? { beneficiarioId: Number(formSolicitud.beneficiarioId) }
@@ -268,7 +289,11 @@ export default function AdminUsuarios() {
                 {autorizaciones.map((a) => (
                   <tr key={a.id} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <td className="px-6 py-3 font-medium text-slate-900 dark:text-slate-100">{a.beneficiario?.email || `Usuario ${a.beneficiarioId}`}</td>
-                    <td className="px-6 py-3">{a.rol?.nombre || a.rolId}</td>
+                    <td className="px-6 py-3">
+                      <span className={a.accion === 'REVOCAR' ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
+                        {a.accion === 'REVOCAR' ? 'Revocar: ' : ''}{a.rol?.nombre || a.rolId}
+                      </span>
+                    </td>
                     <td className="px-6 py-3 text-xs">{a.departamento ? a.departamento.nombre : 'Global'}</td>
                     <td className="px-6 py-3">
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
@@ -385,9 +410,13 @@ export default function AdminUsuarios() {
                           >
                             {r.rol.nombre}
                             <button
-                              onClick={() => quitarRol(u.id, r.rol.codigo)}
+                              onClick={() =>
+                                ROLES_ELEVADOS.includes(r.rol.codigo)
+                                  ? solicitarRevocacion(u, r.rol.codigo)
+                                  : quitarRol(u.id, r.rol.codigo)
+                              }
                               className="text-slate-400 hover:text-red-600"
-                              title="Retirar rol"
+                              title={ROLES_ELEVADOS.includes(r.rol.codigo) ? 'Solicitar revocación (Dirección autoriza)' : 'Retirar rol'}
                             >
                               ×
                             </button>
@@ -441,6 +470,18 @@ export default function AdminUsuarios() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de solicitud</label>
+                <select
+                  value={formSolicitud.accion}
+                  onChange={(e) => setFormSolicitud({ ...formSolicitud, accion: e.target.value })}
+                  className="w-full p-2.5 bg-white dark:bg-slate-900/40 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100"
+                >
+                  <option value="OTORGAR">Otorgar rol</option>
+                  <option value="REVOCAR">Revocar rol (el beneficiario debe tenerlo)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rol a otorgar</label>
                 <select

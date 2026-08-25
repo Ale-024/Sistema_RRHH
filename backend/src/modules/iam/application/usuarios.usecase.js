@@ -50,6 +50,41 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
   });
 
   // Un solo rol por persona: el nuevo rol REEMPLAZA los anteriores.
+  // Degradacion: otorgar un rol base a quien tiene uno elevado (nivel >= 30)
+  // exige autorizacion previa de DIRECCION (el ADMIN no degrada por si solo).
+  const rolesActuales = await prisma.usuarioRol.findMany({
+    where: { usuarioId },
+    include: { rol: { select: { nivelAutoridad: true } } },
+  });
+  const esDegradacion =
+    rolesActuales.some((ur) => ur.rol.nivelAutoridad >= 30) && rol.nivelAutoridad < 30;
+
+  // La degradacion exige autorizacion previa de DIRECCION con el mismo doble
+  // control del otorgamiento (autorizador != ejecutor != beneficiario).
+  let autorizacionDegradacion = null;
+  if (esDegradacion) {
+    autorizacionDegradacion = autorizacionId
+      ? await prisma.autorizacionRol.findUnique({ where: { id: autorizacionId } })
+      : null;
+    const valida =
+      autorizacionDegradacion &&
+      autorizacionDegradacion.estado === 'AUTORIZADA' &&
+      !autorizacionDegradacion.consumidaEn &&
+      autorizacionDegradacion.beneficiarioId === usuarioId &&
+      autorizacionDegradacion.rolId === rol.id &&
+      (!autorizacionDegradacion.venceEn || autorizacionDegradacion.venceEn > new Date()) &&
+      autorizacionDegradacion.autorizadaPorId != null &&
+      autorizacionDegradacion.autorizadaPorId !== ejecutor.id &&
+      autorizacionDegradacion.autorizadaPorId !== usuarioId;
+    if (!valida) {
+      throw new ErrorAplicacion(
+        'DEGRADACION_SIN_AUTORIZACION',
+        409,
+        'Degradar un rol elevado exige autorizacion previa de Direccion General.'
+      );
+    }
+  }
+
   // INV7 (trigger) protege al ultimo ADMIN_TI/DIRECCION de ser degradado.
   await prisma.$transaction(async (tx) => {
     await tx.usuarioRol.deleteMany({ where: { usuarioId } });
@@ -63,11 +98,17 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
     });
   });
 
-  // Cierra el ciclo: la autorizacion queda CONSUMIDA y desaparece de la
-  // bandeja ejecutable (el trigger ya estampo consumidaEn en el INSERT).
+  // Cierra el ciclo: las autorizaciones quedan CONSUMIDAS y desaparecen de
+  // la bandeja ejecutable (el trigger ya estampo consumidaEn en el INSERT).
   if (autorizacion) {
     await prisma.autorizacionRol.update({
       where: { id: autorizacion.id },
+      data: { estado: 'CONSUMIDA', consumidaEn: new Date() },
+    });
+  }
+  if (autorizacionDegradacion) {
+    await prisma.autorizacionRol.update({
+      where: { id: autorizacionDegradacion.id },
       data: { estado: 'CONSUMIDA', consumidaEn: new Date() },
     });
   }
@@ -84,6 +125,34 @@ async function quitarRol(usuarioId, rolId, ctx) {
 
   await validarRevocacion(prisma, { ejecutorId: ejecutor.id, beneficiarioId: usuarioId, rolId });
 
+  // Quitar un rol ELEVADO (nivel >= 30) exige autorizacion REVOCAR de
+  // DIRECCION: el ADMIN de TI no degrada por si solo.
+  const rol = await prisma.rol.findUnique({ where: { id: rolId } });
+  let autorizacionRevocacion = null;
+  if (rol && rol.nivelAutoridad >= 30) {
+    autorizacionRevocacion = ctx.autorizacionId
+      ? await prisma.autorizacionRol.findUnique({ where: { id: ctx.autorizacionId } })
+      : null;
+    const valida =
+      autorizacionRevocacion &&
+      autorizacionRevocacion.accion === 'REVOCAR' &&
+      autorizacionRevocacion.estado === 'AUTORIZADA' &&
+      !autorizacionRevocacion.consumidaEn &&
+      autorizacionRevocacion.beneficiarioId === usuarioId &&
+      autorizacionRevocacion.rolId === rolId &&
+      (!autorizacionRevocacion.venceEn || autorizacionRevocacion.venceEn > new Date()) &&
+      autorizacionRevocacion.autorizadaPorId != null &&
+      autorizacionRevocacion.autorizadaPorId !== ejecutor.id &&
+      autorizacionRevocacion.autorizadaPorId !== usuarioId;
+    if (!valida) {
+      throw new ErrorAplicacion(
+        'QUITAR_SIN_AUTORIZACION',
+        409,
+        'Quitar un rol elevado exige autorizacion previa de Direccion General.'
+      );
+    }
+  }
+
   const restantes = await prisma.usuarioRol.count({ where: { usuarioId } });
   if (restantes <= 1) {
     throw new ErrorAplicacion('ULTIMO_ROL', 409, 'El usuario debe conservar al menos un rol.');
@@ -92,6 +161,13 @@ async function quitarRol(usuarioId, rolId, ctx) {
   await prisma.usuarioRol.delete({
     where: { usuarioId_rolId: { usuarioId, rolId } },
   });
+
+  if (autorizacionRevocacion) {
+    await prisma.autorizacionRol.update({
+      where: { id: autorizacionRevocacion.id },
+      data: { estado: 'CONSUMIDA', consumidaEn: new Date() },
+    });
+  }
   return { message: 'Rol retirado.' };
 }
 
@@ -100,16 +176,19 @@ async function quitarRol(usuarioId, rolId, ctx) {
  * EMPLEADO/ENCUESTADOR: RRHH_SUP. RRHH_SUP: DIRECCION. ADMIN_TI: otro ADMIN_TI.
  * GERENTE_DEPTO: RRHH_SUP. DIRECCION: otro DIRECCION.
  */
-async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDepartamentoId, motivo }, ctx) {
-  const { prisma, ejecutor } = ctx;
-  if (!ejecutor?.id || !Array.isArray(ejecutor.roles)) {
-    throw new ErrorAplicacion('EJECUTOR_AUSENTE', 500, 'Sesion sin roles identificables.');
-  }
+async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, accion = 'OTORGAR', scopeDepartamentoId, motivo }, ctx) {
+    const { prisma, ejecutor } = ctx;
+    if (!ejecutor?.id || !Array.isArray(ejecutor.roles)) {
+      throw new ErrorAplicacion('EJECUTOR_AUSENTE', 500, 'Sesion sin roles identificables.');
+    }
+    if (!['OTORGAR', 'REVOCAR'].includes(accion)) {
+      throw new ErrorAplicacion('DATOS_INVALIDOS', 422, "Accion invalida: use 'OTORGAR' o 'REVOCAR'.");
+    }
 
-  const rol = await prisma.rol.findUnique({ where: { codigo: rolCodigo } });
-  if (!rol) throw new ErrorAplicacion('ROL_INVALIDO', 422, 'El rol indicado no existe.');
+    const rol = await prisma.rol.findUnique({ where: { codigo: rolCodigo } });
+    if (!rol) throw new ErrorAplicacion('ROL_INVALIDO', 422, 'El rol indicado no existe.');
 
-  validarSolicitud(ejecutor.roles.map((r) => r.codigo ?? r), rol.codigo);
+    validarSolicitud(ejecutor.roles.map((r) => r.codigo ?? r), rol.codigo);
 
   // Resolucion del beneficiario: por id o por correo (DIRECCION no maneja
   // listados de usuarios; el formulario le permite escribir el correo).
@@ -121,11 +200,25 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDe
   } else {
     throw new ErrorAplicacion('DATOS_INVALIDOS', 422, 'Indica el beneficiario (id o correo).');
   }
-  if (!beneficiario) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Usuario beneficiario no encontrado.');
+    if (!beneficiario) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Usuario beneficiario no encontrado.');
 
-  const yaVigente = await prisma.autorizacionRol.findFirst({
-    where: { beneficiarioId: beneficiario.id, rolId: rol.id, estado: 'AUTORIZADA', consumidaEn: null },
-  });
+    // REVOCAR: el beneficiario debe tener el rol actualmente.
+    if (accion === 'REVOCAR') {
+      const tieneRol = await prisma.usuarioRol.findUnique({
+        where: { usuarioId_rolId: { usuarioId: beneficiario.id, rolId: rol.id } },
+      });
+      if (!tieneRol) {
+        throw new ErrorAplicacion(
+          'ROL_NO_ASIGNADO',
+          422,
+          `El beneficiario no tiene el rol ${rolCodigo}; no hay nada que revocar.`
+        );
+      }
+    }
+
+    const yaVigente = await prisma.autorizacionRol.findFirst({
+      where: { beneficiarioId: beneficiario.id, rolId: rol.id, accion, estado: 'AUTORIZADA', consumidaEn: null },
+    });
   if (yaVigente) {
     throw new ErrorAplicacion(
       'AUTORIZACION_YA_VIGENTE',
@@ -139,6 +232,7 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDe
     data: {
       beneficiarioId: beneficiario.id,
       rolId: rol.id,
+      accion,
       scopeDepartamentoId: scopeDepartamentoId ?? null,
       solicitadaPorId: ejecutor.id,
       motivo: motivo ?? null,
@@ -146,7 +240,10 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDe
     },
   });
 
-  return { message: `Solicitud de rol ${rolCodigo} registrada.`, data: { id: solicitud.id, venceEn } };
+  return {
+    message: `${accion === 'REVOCAR' ? 'Revocacion' : 'Solicitud'} de rol ${rolCodigo} registrada.`,
+    data: { id: solicitud.id, venceEn },
+  };
 }
 
 /**

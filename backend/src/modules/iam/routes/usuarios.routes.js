@@ -26,6 +26,8 @@ const esquemaSolicitud = z.object({
   // DIRECCION no tiene listados de usuarios/empleados: puede indicar el correo.
   email: z.string().trim().email().optional(),
   rolCodigo: z.string().min(2).max(30),
+  // OTORGAR (default) | REVOCAR: ciclo simetrico para quitar roles elevados.
+  accion: z.enum(['OTORGAR', 'REVOCAR']).default('OTORGAR'),
   scopeDepartamentoId: z.coerce.number().int().positive().optional(),
   motivo: z.string().trim().max(500).optional(),
 });
@@ -111,10 +113,13 @@ function rutasAdminUsuarios(ctx) {
   router.delete(
     '/usuarios/:id/roles/:rolId',
     exigirPermiso('usuarios:administrar'),
-    validar({ params: esquemaIds }),
+    validar({ params: esquemaIds, body: z.object({ autorizacionId: z.coerce.number().int().positive().optional() }).optional() }),
     async (req, res, next) => {
       try {
-        const resultado = await quitarRol(req.params.id, req.params.rolId, ctxDe(req));
+        const resultado = await quitarRol(req.params.id, req.params.rolId, {
+          ...ctxDe(req),
+          autorizacionId: req.body?.autorizacionId,
+        });
         await prisma.auditoria.create({
           data: {
             usuarioId: req.user.id,
