@@ -91,10 +91,11 @@ async function crearBaseTemporal() {
       'empleados:actualizar', 'empleados:desvincular', 'contratos:crear',
       'organizacion:administrar', 'asistencia:leer_global',
       'asistencia:importar', 'asistencia:corregir', 'asistencia:cerrar',
-      'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar', 'parametros:leer', 'parametros:administrar', 'reportes:ver', 'reportes:administrar',
+      'asistencia:marcar', 'asistencia:leer_propia',
+      'solicitudes:crear', 'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'vacaciones:leer', 'vacaciones:crear', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar', 'parametros:leer', 'parametros:administrar', 'reportes:ver', 'reportes:administrar',
     ],
     GERENTE_DEPTO: ['reportes:ver'],
-    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'reportes:ver_global', 'autorizaciones:decidir'],
+    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'reportes:ver_global', 'autorizaciones:decidir', 'asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear'],
     ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],
   };
 

@@ -52,7 +52,19 @@ export default function Layout() {
     { name: 'Mis recibos', path: '/employee/payroll', icon: Receipt, permiso: 'planilla:leer' },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso) || (l.permiso === 'reportes:ver' && tienePermiso(user, 'reportes:ver_global')));
 
-  const links = esRolAdministrativo(user) ? adminLinks : employeeLinks;
+  // Autoservicio dentro del menu administrativo: los administrativos tambien
+  // son empleados (marcan asistencia, solicitan permisos y vacaciones).
+  const autoservicioAdmin = [
+    { name: 'Mi asistencia', path: '/employee/attendance', icon: CalendarClock, permiso: 'asistencia:marcar' },
+    { name: 'Mis solicitudes', path: '/employee/requests', icon: FileText, permiso: 'solicitudes:crear' },
+    { name: 'Vacaciones', path: '/employee/vacations', icon: CalendarDays, permiso: 'vacaciones:leer' },
+    { name: 'Mis recibos', path: '/employee/payroll', icon: Receipt, permiso: 'planilla:leer' },
+    { name: 'Mi perfil', path: '/employee/profile', icon: User },
+  ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
+
+  const links = esRolAdministrativo(user)
+    ? [...adminLinks, ...autoservicioAdmin]
+    : employeeLinks;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex transition-colors">
