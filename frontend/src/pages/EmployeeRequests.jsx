@@ -59,8 +59,10 @@ export default function EmployeeRequests() {
     fetchData();
   }, [fetchData]);
 
+  const [guardando, setGuardando] = useState(false);
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setGuardando(true);
     try {
       const payload = {
         ...formData,
@@ -81,6 +83,8 @@ export default function EmployeeRequests() {
       fetchData();
     } catch (error) {
       setMessage(error.response?.data?.detail || 'No fue posible guardar la solicitud.');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -230,7 +234,7 @@ export default function EmployeeRequests() {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Ruta del soporte (si aplica)<input value={formData.soporteRuta} onChange={(event) => setFormData({ ...formData, soporteRuta: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
-                <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">{formData.id ? 'Guardar cambios' : 'Enviar solicitud'}</button>
+                <button type="submit" disabled={guardando} className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">{guardando ? 'Guardando…' : formData.id ? 'Guardar cambios' : 'Enviar solicitud'}</button>
               </div>
             </form>
           </div>

@@ -113,10 +113,31 @@ async function siguienteFolio(tx, fecha = new Date()) {
 }
 
 async function crearSolicitud({ prisma, empleadoId, usuarioId, datos, ip }) {
-  const fechaInicio = inicioDelDia(datos.fechaInicio);
-  const fechaFin = inicioDelDia(datos.fechaFin);
-  validarRango(fechaInicio, fechaFin);
+    const fechaInicio = inicioDelDia(datos.fechaInicio);
+    const fechaFin = inicioDelDia(datos.fechaFin);
+    validarRango(fechaInicio, fechaFin);
 
+    // Doble clic / reenvio accidental: un borrador identico (mismo tipo,
+    // fechas y motivo) ya creado y aun no resuelto bloquea la creacion.
+    const duplicado = await prisma.solicitudPermiso.findFirst({
+      where: {
+        empleadoId,
+        tipoPermisoId: datos.tipoPermisoId,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        motivo: datos.motivo ?? null,
+        estado: 'SOLICITADO',
+      },
+      select: { id: true, folio: true },
+    });
+    if (duplicado) {
+      throw new ErrorAplicacion(
+        'SOLICITUD_DUPLICADA',
+        409,
+        `Ya existe una solicitud identica en borrador (${duplicado.folio}). Enviala o cancelala primero.`
+      );
+    }
+  
   return prisma.$transaction(async (tx) => {
     const tipo = await obtenerTipoActivo(tx, datos.tipoPermisoId);
     const diasHabiles = diasHabilesEntre(fechaInicio, fechaFin);
