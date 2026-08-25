@@ -45,7 +45,7 @@ export default function AdminReports() {
     const url = URL.createObjectURL(respuesta.data);
     const enlace = document.createElement('a');
     enlace.href = url;
-    enlace.download = `${reporte}-${anio}-${mes}.${formato}`;
+    enlace.download = `${reporte}-${anio}-${String(mes).padStart(2, '0')}.${formato}`;
     enlace.click();
     URL.revokeObjectURL(url);
   };

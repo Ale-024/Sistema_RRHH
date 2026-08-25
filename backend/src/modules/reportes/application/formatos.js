@@ -79,6 +79,11 @@ function fechaLarga(fecha = new Date()) {
  * PDF corporativo: banner de marca, tabla con encabezado y filas alternadas,
  * paginacion automatica y pie con numeracion. Sin dependencias externas.
  */
+// Texto con posicion ABSOLUTA (Tm): los Td encadenados acumulan offset y
+// dibujan las columnas fuera de pagina. Cada celda es su propio BT/ET.
+const celdaPdf = (texto, x, y, fuente, tamano, color) =>
+  `BT /${fuente} ${tamano} Tf ${color} rg 1 0 0 1 ${Number(x).toFixed(2)} ${Number(y).toFixed(2)} Tm (${escaparPdf(texto)}) Tj ET`;
+
 function crearPdfReporte(titulo, filas, meta = {}) {
   const anchoPagina = 612;
   const altoPagina = 792;
@@ -100,8 +105,7 @@ function crearPdfReporte(titulo, filas, meta = {}) {
   if (!grupos.length) grupos.push([]);
   const totalPaginas = grupos.length;
 
-  const periodo = meta.periodo ? `${meta.periodo} · ` : '';
-  const generado = `Generado: ${fechaLarga()}${meta.periodo ? ` · ${meta.periodo}` : ''}`;
+  const generado = `Generado: ${fechaLarga()}`;
 
   const contenidos = grupos.map((filasPagina, indice) => {
     const ops = [];
@@ -109,22 +113,19 @@ function crearPdfReporte(titulo, filas, meta = {}) {
 
     // Banner de marca
     ops.push(`${PDF_VERDE} rg`, `${margenX} ${yBanner} ${tablaAncho} 52 re f`);
-    ops.push('BT /F2 14 Tf 1 1 1 rg', `${margenX + 14} ${yBanner + 30} Td (MARKETING TOTAL) Tj ET`);
-    ops.push('BT /F1 9 Tf 1 1 1 rg', `${margenX + 14} ${yBanner + 14} Td (${escaparPdf(`Gestión Humana · Reporte de ${titulo}`)}) Tj ET`);
-    ops.push('BT /F1 7.5 Tf 0.85 0.92 0.88 rg', `${anchoPagina - margenX - 170} ${yBanner + 14} Td (${escaparPdf(generado)}) Tj ET`);
+    ops.push(celdaPdf('MARKETING TOTAL', margenX + 14, yBanner + 30, 'F2', 14, '1 1 1 rg'));
+    ops.push(celdaPdf(`Gestión Humana · Reporte de ${titulo}`, margenX + 14, yBanner + 13, 'F1', 9, '1 1 1 rg'));
+    ops.push(celdaPdf(generado, anchoPagina - margenX - 172, yBanner + 30, 'F1', 7.5, '0.85 0.92 0.88 rg'));
 
     // Resumen
-    let y = yBanner - 22;
-    ops.push('BT /F1 8 Tf', `0.35 0.40 0.45 rg`, `${margenX} ${y} Td (${escaparPdf(`Registros: ${filas.length}${meta.periodo ? ` · ${meta.periodo}` : ''}`)}) Tj ET`);
+    ops.push(celdaPdf(`Registros: ${filas.length}${meta.periodo ? ` · ${meta.periodo}` : ''}`, margenX, yBanner - 20, 'F1', 8, '0.35 0.40 0.45 rg'));
 
     // Encabezado de tabla
-    y = tablaY;
+    let y = tablaY;
     ops.push(`${PDF_GRIS_BANDA} rg`, `${margenX} ${y - filaAlto + 5} ${tablaAncho} ${filaAlto} re f`);
-    ops.push('BT /F2 8 Tf 0.10 0.15 0.12 rg');
     columnas.forEach((columna, i) => {
-      ops.push(`${margenX + 5 + i * anchoCol} ${y - filaAlto + 10} Td (${escaparPdf(truncarPdf(String(columna).toUpperCase(), maxCaracteres))}) Tj`);
+      ops.push(celdaPdf(truncarPdf(String(columna).toUpperCase(), maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F2', 8, '0.10 0.15 0.12 rg'));
     });
-    ops.push('ET');
 
     // Filas alternadas
     y -= filaAlto;
@@ -132,18 +133,16 @@ function crearPdfReporte(titulo, filas, meta = {}) {
       if (indice % 2 === 1) {
         ops.push(`${PDF_GRIS_FILA} rg`, `${margenX} ${y - filaAlto + 5} ${tablaAncho} ${filaAlto} re f`);
       }
-      ops.push('BT /F1 8 Tf', `${PDF_TEXTO} rg`);
       columnas.forEach((columna, i) => {
-        ops.push(`${margenX + 5 + i * anchoCol} ${y - filaAlto + 10} Td (${escaparPdf(truncarPdf(fila[columna], maxCaracteres))}) Tj`);
+        ops.push(celdaPdf(truncarPdf(fila[columna], maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F1', tamanoCelda, PDF_TEXTO));
       });
-      ops.push('ET');
       y -= filaAlto;
     });
 
     // Pie de pagina
     ops.push('0.78 0.82 0.86 RG 0.7 w', `${margenX} 46 m ${anchoPagina - margenX} 46 l S`);
-    ops.push(`BT /F1 7 Tf ${PDF_GRIS_TEXTO} rg`, `${margenX} 34 Td (Marketing Total · SIRH-MKT - documento generado automaticamente) Tj ET`);
-    ops.push(`BT /F1 7 Tf ${anchoPagina - margenX - 78} 34 Td (Pagina ${indice + 1} de ${totalPaginas}) Tj ET`);
+    ops.push(celdaPdf('Marketing Total · SIRH-MKT - documento generado automaticamente', margenX, 34, 'F1', 7, PDF_GRIS_TEXTO));
+    ops.push(celdaPdf(`Pagina ${indice + 1} de ${totalPaginas}`, anchoPagina - margenX - 78, 34, 'F1', 7, PDF_GRIS_TEXTO));
 
     return ops.join('\n');
   });
@@ -158,8 +157,9 @@ function crearPdfReporte(titulo, filas, meta = {}) {
   });
   objetos.push('<< /Type /Catalog /Pages 2 0 R >>');
   objetos.push(`<< /Type /Pages /Kids [${idsHijos.join(' ')}] /Count ${contenidos.length} >>`);
-  objetos.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  objetos.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+  // WinAnsiEncoding: sin esto los acentos (ó, é, í...) se pierden al renderizar.
+  objetos.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  objetos.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
   contenidos.forEach((contenido, indice) => {
     const idPagina = primerIdPagina + indice * 2;
     const idContenido = idPagina + 1;
