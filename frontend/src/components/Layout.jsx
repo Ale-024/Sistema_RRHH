@@ -39,7 +39,7 @@ export default function Layout() {
     { name: 'Vacaciones', path: '/admin/vacations', icon: CalendarDays, permisos: ['vacaciones:aprobar', 'vacaciones:leer_global'] },
     { name: 'Nómina', path: '/admin/payroll', icon: Receipt, permisos: ['planilla:leer_global'] },
     { name: 'Parámetros legales', path: '/admin/parameters', icon: Receipt, permisos: ['parametros:leer'] },
-    { name: 'Usuarios y roles', path: '/admin/usuarios', icon: Shield, permisos: ['usuarios:administrar', 'autorizaciones:decidir'] },
+    { name: 'Usuarios y roles', path: '/admin/usuarios', icon: Shield, permisos: ['usuarios:administrar', 'autorizaciones:decidir', 'solicitudes:revisar'] },
     { name: 'Reportes', path: '/admin/reports', icon: BarChart3, permisos: ['reportes:ver', 'reportes:ver_global'] },
   ].filter((l) => !l.permisos || tieneAlgunPermiso(user, l.permisos));
 

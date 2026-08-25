@@ -38,10 +38,13 @@ export default function AdminUsuarios() {
   const [procesando, setProcesando] = useState('');
 
   // ADMIN_TI gestiona cuentas; DIRECCION (autorizaciones:decidir) participa
-  // en el ciclo de autorizacion de roles elevados.
+  // en el ciclo de autorizacion de roles elevados; RRHH_SUP solicita
+  // autorizaciones para su personal (matriz del Anexo, sec. 3).
   const puedeGestionar = tienePermiso(user, 'usuarios:administrar');
   const puedeDecidir = tienePermiso(user, 'autorizaciones:decidir');
-  const participa = tieneAlgunPermiso(user, ['usuarios:administrar', 'autorizaciones:decidir']);
+  const rolesSolicitables = SOLICITABLES_POR_ROL[user?.rol] ?? [];
+  const puedeSolicitar = rolesSolicitables.length > 0;
+  const participa = puedeGestionar || puedeDecidir || puedeSolicitar;
 
   const cargar = async () => {
     setLoading(true);
@@ -154,7 +157,6 @@ export default function AdminUsuarios() {
   };
 
   // ── Paso 1 del anexo: solicitar la autorizacion de un rol elevado ──
-  const rolesSolicitables = SOLICITABLES_POR_ROL[user?.rol] ?? [];
   const [formSolicitud, setFormSolicitud] = useState(null);
   const [beneficiarios, setBeneficiarios] = useState([]);
   const [departamentos, setDepartamentos] = useState([]);

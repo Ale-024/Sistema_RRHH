@@ -45,7 +45,7 @@ const ACCESOS = [
     titulo: 'Usuarios y roles',
     descripcion: 'Cuentas, autorizaciones de rol elevado y bitácora.',
     ruta: '/admin/usuarios',
-    permisos: ['usuarios:administrar', 'autorizaciones:decidir'],
+    permisos: ['usuarios:administrar', 'autorizaciones:decidir', 'solicitudes:revisar'],
   },
   {
     titulo: 'Reportes',
