@@ -1,6 +1,7 @@
 const { ErrorAplicacion } = require('../../../shared/dominio/errores');
 const { hashEvento } = require('./hash-evento');
 const { consolidarDia } = require('./consolidar-dia.usecase');
+const { fechaDiaHonduras } = require('../../../shared/dominio/tiempo');
 
 /**
  * CU02 - Marcaje propio del empleado (web o movil responsivo).
@@ -33,9 +34,13 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, proyectoId, dis
     }
   }
 
-  const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  const finDia = new Date(inicioDia);
-  finDia.setDate(finDia.getDate() + 1);
+  // Dia de calendario HONDURENO: un marcaje de 7 PM (01:00 UTC del dia
+  // siguiente) pertenece al dia que el empleado vive, no al del servidor.
+  // La ventana de marcajes del dia se desplaza +6h (Honduras = UTC-6).
+  const inicioDia = fechaDiaHonduras(ahora);
+  const finDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
+  const ventanaDesde = new Date(inicioDia.getTime() + 6 * 60 * 60 * 1000);
+  const ventanaHasta = new Date(finDia.getTime() + 6 * 60 * 60 * 1000);
 
   // Un dia cerrado es inmutable: ni marcajes ni recalculos. Correcciones
   // posteriores pasan por RRHH (reabrir dia -> corregir -> cerrar).
@@ -55,7 +60,7 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, proyectoId, dis
   // entrada sin salida posterior, corresponde SALIDA; en otro caso,
   // ENTRADA (incluye iniciar un nuevo ciclo tras una salida).
   const marcajesHoy = await prisma.marcaje.findMany({
-    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia } },
+    where: { empleadoId, ocurridoEn: { gte: ventanaDesde, lt: ventanaHasta } },
     orderBy: { ocurridoEn: 'asc' },
     select: { tipo: true, ocurridoEn: true },
   });
@@ -69,7 +74,7 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, proyectoId, dis
   // cualquier tipo: tambien evita duplicados tras completar un ciclo.
   const segundosAntirrepeticion = Number(ctx.entorno?.SEGUNDOS_ANTIRREPETICION ?? 60);
   const ultimoMarcaje = await prisma.marcaje.findFirst({
-    where: { empleadoId, ocurridoEn: { gte: inicioDia, lt: finDia } },
+    where: { empleadoId, ocurridoEn: { gte: ventanaDesde, lt: ventanaHasta } },
     orderBy: { ocurridoEn: 'desc' },
   });
   if (
@@ -106,7 +111,7 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, proyectoId, dis
     // y salida) queda visible de inmediato para empleado y supervisor.
     // Es idempotente; un fallo aqui no revierte el marcaje ya guardado.
     try {
-      await consolidarDia(ahora, ctx);
+      await consolidarDia(inicioDia, ctx);
     } catch (errorConsolidacion) {
       console.error('Auto-consolidacion post-marcaje fallo:', errorConsolidacion.message);
     }

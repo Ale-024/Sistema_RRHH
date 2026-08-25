@@ -9,8 +9,12 @@
  * - Idempotente: reejecutar el mismo dia no altera resultados.
  * - Un dia cerrado nunca se recalcula (ademas lo bloquea un trigger).
  */
+const { minutosDiaHonduras } = require('../../../shared/dominio/tiempo');
+
 function minutosDeDia(fecha) {
-  return fecha.getHours() * 60 + fecha.getMinutes();
+  // Reloj de HONDURAS: la tardanza y los minutos se calculan contra el
+  // huso del empleado, no contra el huso del servidor.
+  return minutosDiaHonduras(fecha);
 }
 
 function minutosDesdeHHMM(hhmm) {
@@ -45,7 +49,8 @@ async function consolidarDia(fechaObjetivo, ctx) {
       }),
       prisma.diaFeriado.findUnique({ where: { fecha: inicio } }),
       prisma.marcaje.findMany({
-        where: { ocurridoEn: { gte: inicio, lt: fin } },
+        // Ventana +6h: el dia hondureno D cubre [D 06:00 UTC, D+1 06:00 UTC).
+        where: { ocurridoEn: { gte: new Date(inicio.getTime() + 6 * 60 * 60 * 1000), lt: new Date(fin.getTime() + 6 * 60 * 60 * 1000) } },
         orderBy: [{ empleadoId: 'asc' }, { ocurridoEn: 'asc' }],
       }),
       prisma.solicitudPermiso.findMany({

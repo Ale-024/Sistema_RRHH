@@ -92,7 +92,14 @@ function truncarAncho(texto, anchoMax, tamano) {
 }
 
 function fechaLarga(fecha = new Date()) {
-  return fecha.toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
+  // Reloj de Honduras: el servidor vive en UTC y a las 7 PM de Honduras
+  // ya seria "manana" para el.
+  return fecha.toLocaleDateString('es-HN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Tegucigalpa',
+  });
 }
 
 /**
