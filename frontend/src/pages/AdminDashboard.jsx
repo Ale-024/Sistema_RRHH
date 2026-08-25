@@ -45,7 +45,7 @@ const ACCESOS = [
     titulo: 'Usuarios y roles',
     descripcion: 'Cuentas, autorizaciones de rol elevado y bitácora.',
     ruta: '/admin/usuarios',
-    permisos: ['usuarios:administrar', 'planilla:cerrar'],
+    permisos: ['usuarios:administrar', 'autorizaciones:decidir'],
   },
   {
     titulo: 'Reportes',
@@ -112,39 +112,39 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">Panel de administración</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Panel de administración</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           {user?.nombres} {user?.apellidos} · {fechaHoy()}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200 border border-slate-200">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700">
         {tienePermiso(user, 'empleados:leer') && (
-          <div className="bg-white p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <div className="bg-white dark:bg-slate-800 p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Empleados registrados
             </p>
-            <p className="text-3xl font-semibold text-slate-800 mt-2">
+            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
               {stats.empleados ?? '—'}
             </p>
           </div>
         )}
         {tienePermiso(user, 'solicitudes:revisar') && (
-          <div className="bg-white p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <div className="bg-white dark:bg-slate-800 p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Solicitudes pendientes
             </p>
-            <p className="text-3xl font-semibold text-slate-800 mt-2">
+            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
               {stats.solicitudesPendientes ?? '—'}
             </p>
           </div>
         )}
         {tienePermiso(user, 'planilla:leer_global') && (
-          <div className="bg-white p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <div className="bg-white dark:bg-slate-800 p-6">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Nóminas por aprobar o pagar
             </p>
-            <p className="text-3xl font-semibold text-slate-800 mt-2">
+            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
               {stats.planillasPendientes ?? '—'}
             </p>
             <Link to="/admin/payroll" className="text-sm text-brand-blue hover:underline mt-1 inline-block">
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
       </div>
 
       <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 mb-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
           Accesos
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -163,10 +163,10 @@ export default function AdminDashboard() {
             <Link
               key={a.ruta}
               to={a.ruta}
-              className="block bg-white border border-slate-200 p-5 hover:border-brand-blue transition-colors"
+              className="block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 hover:border-brand-blue transition-colors"
             >
-              <p className="font-medium text-slate-800">{a.titulo}</p>
-              <p className="text-sm text-slate-500 mt-1">{a.descripcion}</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{a.titulo}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{a.descripcion}</p>
             </Link>
           ))}
         </div>

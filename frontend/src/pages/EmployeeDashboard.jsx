@@ -45,45 +45,45 @@ export default function EmployeeDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
           Bienvenido, {user?.nombres}
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
           Marketing Total · Portal del empleado
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Asistencia */}
-        <section className="bg-white border border-slate-200 p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500">
+        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Registro de asistencia
           </h2>
 
           <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Entrada</dt>
-              <dd className="font-medium text-slate-800">
+            <div className="flex justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
+              <dt className="text-slate-500 dark:text-slate-400">Entrada</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">
                 {hoy?.ultimaEntrada
                   ? new Date(hoy.ultimaEntrada).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })
                   : '—'}
               </dd>
             </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Salida</dt>
-              <dd className="font-medium text-slate-800">
+            <div className="flex justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
+              <dt className="text-slate-500 dark:text-slate-400">Salida</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">
                 {hoy?.ultimaSalida
                   ? new Date(hoy.ultimaSalida).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })
                   : 'pendiente'}
               </dd>
             </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <dt className="text-slate-500">Marcajes de hoy</dt>
-              <dd className="font-medium text-slate-800">{hoy?.marcajesDelDia ?? '—'}</dd>
+            <div className="flex justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
+              <dt className="text-slate-500 dark:text-slate-400">Marcajes de hoy</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">{hoy?.marcajesDelDia ?? '—'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Próximo marcaje</dt>
-              <dd className="font-medium text-slate-800">{hoy ? proximoTipo : '—'}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Próximo marcaje</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">{hoy ? proximoTipo : '—'}</dd>
             </div>
           </dl>
 
@@ -99,8 +99,8 @@ export default function EmployeeDashboard() {
             <p
               className={`mt-4 text-sm px-3 py-2 border-l-4 ${
                 mensaje.tipo === 'ok'
-                  ? 'border-green-600 bg-green-50 text-green-700'
-                  : 'border-red-500 bg-red-50 text-red-700'
+                  ? 'border-green-600 bg-green-50 dark:bg-emerald-500/10 text-green-700 dark:text-emerald-400'
+                  : 'border-red-500 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400'
               }`}
             >
               {mensaje.texto}
@@ -109,11 +109,11 @@ export default function EmployeeDashboard() {
         </section>
 
         {/* Accesos */}
-        <section className="bg-white border border-slate-200 p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 mb-4">
+        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
             Gestiones
           </h2>
-          <nav className="space-y-px bg-slate-100 border border-slate-100">
+          <nav className="space-y-px bg-slate-100 dark:bg-slate-700 border border-slate-100 dark:border-slate-700/60">
             {[
               { titulo: 'Mis solicitudes', descripcion: 'Permisos y su seguimiento', ruta: '/employee/requests' },
               { titulo: 'Vacaciones', descripcion: 'Saldos y solicitudes de vacaciones', ruta: '/employee/vacations' },
@@ -123,10 +123,10 @@ export default function EmployeeDashboard() {
               <Link
                 key={a.ruta}
                 to={a.ruta}
-                className="block bg-white hover:bg-brand-50 px-4 py-3 transition-colors"
+                className="block bg-white dark:bg-slate-800 hover:bg-brand-50 px-4 py-3 transition-colors"
               >
-                <p className="font-medium text-slate-800">{a.titulo}</p>
-                <p className="text-sm text-slate-500">{a.descripcion}</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{a.titulo}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{a.descripcion}</p>
               </Link>
             ))}
           </nav>

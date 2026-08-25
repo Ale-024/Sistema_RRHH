@@ -3,11 +3,11 @@ import { CalendarDays, CheckCircle2, Clock, Plus, XCircle } from 'lucide-react';
 import api from '../services/api';
 
 const ESTADOS = {
-  SOLICITADO: ['bg-slate-100 text-slate-700', 'Solicitado'],
+  SOLICITADO: ['bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300', 'Solicitado'],
   EN_REVISION: ['bg-orange-100 text-orange-800', 'En revisión'],
-  APROBADO: ['bg-green-100 text-green-800', 'Aprobado'],
-  RECHAZADO: ['bg-red-100 text-red-800', 'Rechazado'],
-  CANCELADO: ['bg-slate-100 text-slate-500', 'Cancelado'],
+  APROBADO: ['bg-green-100 text-green-800 dark:text-emerald-300', 'Aprobado'],
+  RECHAZADO: ['bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300', 'Rechazado'],
+  CANCELADO: ['bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400', 'Cancelado'],
 };
 
 const getReturnReason = (request) => {
@@ -69,20 +69,20 @@ export default function EmployeeVacations() {
   return (
     <div className="animate-in fade-in duration-500 space-y-6">
       <div className="flex items-end justify-between">
-        <div><h1 className="text-2xl font-bold text-slate-900">Mis vacaciones</h1><p className="mt-1 text-slate-500">Consulta tu saldo y solicita fechas de descanso.</p></div>
+        <div><h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis vacaciones</h1><p className="mt-1 text-slate-500 dark:text-slate-400">Consulta tu saldo y solicita fechas de descanso.</p></div>
         <button onClick={() => setModal(true)} disabled={!periodos.length} className="flex items-center rounded-lg bg-brand-blue px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"><Plus className="mr-1 h-5 w-5" /> Nueva solicitud</button>
       </div>
-      {message && <div className="rounded-lg bg-blue-50 p-4 text-sm font-medium text-blue-700">{message}</div>}
+      {message && <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 p-4 text-sm font-medium text-blue-700 dark:text-blue-400">{message}</div>}
       <div className="grid gap-4 md:grid-cols-3">
-        {periodos.map((periodo) => <div key={periodo.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Año de servicio {periodo.anioServicio}</p><p className="mt-2 text-3xl font-bold text-slate-900">{periodo.saldo} <span className="text-base font-normal text-slate-500">días disponibles</span></p><p className="mt-2 text-xs text-slate-500">Derecho: {periodo.diasDerecho} · Gozados: {periodo.diasGozados}</p></div>)}
+        {periodos.map((periodo) => <div key={periodo.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm"><p className="text-sm text-slate-500 dark:text-slate-400">Año de servicio {periodo.anioServicio}</p><p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{periodo.saldo} <span className="text-base font-normal text-slate-500 dark:text-slate-400">días disponibles</span></p><p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Derecho: {periodo.diasDerecho} · Gozados: {periodo.diasGozados}</p></div>)}
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-6 py-4"><h2 className="font-semibold text-slate-900">Historial de solicitudes</h2></div>
-        {!solicitudes.length ? <div className="p-12 text-center text-slate-500"><CalendarDays className="mx-auto mb-3 h-10 w-10 text-slate-300" />No tienes solicitudes registradas.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm text-slate-600"><thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-6 py-4">Folio</th><th className="px-6 py-4">Fechas</th><th className="px-6 py-4">Días</th><th className="px-6 py-4">Estado</th><th className="px-6 py-4">Acciones</th></tr></thead><tbody>{solicitudes.map((solicitud) => { 
+      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+        <div className="border-b border-slate-100 dark:border-slate-700/60 px-6 py-4"><h2 className="font-semibold text-slate-900 dark:text-slate-100">Historial de solicitudes</h2></div>
+        {!solicitudes.length ? <div className="p-12 text-center text-slate-500 dark:text-slate-400"><CalendarDays className="mx-auto mb-3 h-10 w-10 text-slate-300" />No tienes solicitudes registradas.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm text-slate-600 dark:text-slate-400"><thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs uppercase text-slate-500 dark:text-slate-400"><tr><th className="px-6 py-4">Folio</th><th className="px-6 py-4">Fechas</th><th className="px-6 py-4">Días</th><th className="px-6 py-4">Estado</th><th className="px-6 py-4">Acciones</th></tr></thead><tbody>{solicitudes.map((solicitud) => { 
           const [clases, etiqueta] = ESTADOS[solicitud.estado] || ESTADOS.SOLICITADO; 
           return (
-            <tr key={solicitud.id} className="border-b border-slate-100 hover:bg-slate-50">
-              <td className="px-6 py-4 font-medium text-slate-900">
+            <tr key={solicitud.id} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
                 <div className="truncate">{solicitud.folio}</div>
                 {getReturnReason(solicitud) && (
                   <div className="mt-1 text-xs font-medium text-orange-600">Devuelto: {getReturnReason(solicitud)}</div>
@@ -95,7 +95,7 @@ export default function EmployeeVacations() {
                 {solicitud.estado === 'SOLICITADO' && (
                   <div className="flex gap-2">
                     <button onClick={() => handleSend(solicitud.id)} className="text-xs font-medium text-green-600 hover:text-green-800">Reenviar</button>
-                    <button onClick={() => cancelar(solicitud.id)} className="text-xs font-medium text-red-600 hover:text-red-800">Cancelar</button>
+                    <button onClick={() => cancelar(solicitud.id)} className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800">Cancelar</button>
                   </div>
                 )}
                 {solicitud.estado === 'EN_REVISION' && <Clock className="h-4 w-4 text-orange-500" />}
@@ -105,7 +105,7 @@ export default function EmployeeVacations() {
           ); 
         })}</tbody></table></div>}
       </div>
-      {modal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"><div className="w-full max-w-md rounded-xl bg-white shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 px-6 py-4"><h3 className="font-bold text-slate-900">Nueva solicitud</h3><button onClick={() => setModal(false)} aria-label="Cerrar"><XCircle className="h-6 w-6 text-slate-400" /></button></div><form onSubmit={enviar} className="space-y-4 p-6"><label className="block text-sm font-medium text-slate-700">Periodo<select required value={form.periodoId} onChange={(event) => setForm({ ...form, periodoId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5">{periodos.map((periodo) => <option key={periodo.id} value={periodo.id}>Año {periodo.anioServicio} — {periodo.saldo} días</option>)}</select></label><div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium text-slate-700">Desde<input required type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label><label className="block text-sm font-medium text-slate-700">Hasta<input required type="date" value={form.fechaFin} onChange={(event) => setForm({ ...form, fechaFin: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label></div><label className="block text-sm font-medium text-slate-700">ID del suplente (opcional)<input type="number" min="1" value={form.suplenteId} onChange={(event) => setForm({ ...form, suplenteId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label><div className="flex justify-end gap-3"><button type="button" onClick={() => setModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-100">Cancelar</button><button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">Enviar</button></div></form></div></div>}
+      {modal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"><div className="w-full max-w-md rounded-xl bg-white dark:bg-slate-800 shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 px-6 py-4"><h3 className="font-bold text-slate-900 dark:text-slate-100">Nueva solicitud</h3><button onClick={() => setModal(false)} aria-label="Cerrar"><XCircle className="h-6 w-6 text-slate-400" /></button></div><form onSubmit={enviar} className="space-y-4 p-6"><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Periodo<select required value={form.periodoId} onChange={(event) => setForm({ ...form, periodoId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5">{periodos.map((periodo) => <option key={periodo.id} value={periodo.id}>Año {periodo.anioServicio} — {periodo.saldo} días</option>)}</select></label><div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Desde<input required type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Hasta<input required type="date" value={form.fechaFin} onChange={(event) => setForm({ ...form, fechaFin: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label></div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300">ID del suplente (opcional)<input type="number" min="1" value={form.suplenteId} onChange={(event) => setForm({ ...form, suplenteId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label><div className="flex justify-end gap-3"><button type="button" onClick={() => setModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button><button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">Enviar</button></div></form></div></div>}
     </div>
   );
 }

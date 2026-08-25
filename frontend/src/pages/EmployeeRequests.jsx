@@ -3,11 +3,11 @@ import api from '../services/api';
 import { Calendar, CheckCircle2, Clock, FileEdit, Plus, XCircle } from 'lucide-react';
 
 const ESTADOS = {
-  SOLICITADO: ['bg-slate-100 text-slate-700', 'Solicitado'],
+  SOLICITADO: ['bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300', 'Solicitado'],
   EN_REVISION: ['bg-orange-100 text-orange-800', 'En revisión'],
-  APROBADO: ['bg-green-100 text-green-800', 'Aprobado'],
-  RECHAZADO: ['bg-red-100 text-red-800', 'Rechazado'],
-  CANCELADO: ['bg-slate-100 text-slate-500', 'Cancelado'],
+  APROBADO: ['bg-green-100 text-green-800 dark:text-emerald-300', 'Aprobado'],
+  RECHAZADO: ['bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300', 'Rechazado'],
+  CANCELADO: ['bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400', 'Cancelado'],
 };
 
 const inicial = { id: null, tipoPermisoId: '', fechaInicio: '', fechaFin: '', motivo: '', soporteRuta: '' };
@@ -118,8 +118,8 @@ export default function EmployeeRequests() {
     <div className="animate-in fade-in duration-500 space-y-6">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mis permisos</h1>
-          <p className="mt-1 text-slate-500">Solicita permisos especiales y consulta su seguimiento.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis permisos</h1>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">Solicita permisos especiales y consulta su seguimiento.</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -130,20 +130,20 @@ export default function EmployeeRequests() {
         </button>
       </div>
 
-      {message && <div className="rounded-lg bg-blue-50 p-4 text-sm font-medium text-blue-700">{message}</div>}
+      {message && <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 p-4 text-sm font-medium text-blue-700 dark:text-blue-400">{message}</div>}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Cargando...</div>
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400">Cargando...</div>
         ) : !requests.length ? (
           <div className="flex flex-col items-center p-12 text-center">
             <Calendar className="mb-4 h-12 w-12 text-slate-300" />
-            <p className="text-lg text-slate-500">No tienes permisos registrados.</p>
+            <p className="text-lg text-slate-500 dark:text-slate-400">No tienes permisos registrados.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+              <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs uppercase text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-6 py-4">Folio</th>
                   <th className="px-6 py-4">Tipo</th>
@@ -155,8 +155,8 @@ export default function EmployeeRequests() {
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr key={request.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-900">{request.folio}</td>
+                  <tr key={request.id} className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{request.folio}</td>
                     <td className="px-6 py-4">{request.tipoPermiso?.nombre || request.tipoPermiso?.codigo}</td>
                     <td className="px-6 py-4 text-xs">
                       {new Date(request.fechaInicio).toLocaleDateString()} — {new Date(request.fechaFin).toLocaleDateString()}
@@ -178,7 +178,7 @@ export default function EmployeeRequests() {
                             <button onClick={() => openEditModal(request)} className="text-xs font-medium text-blue-600 hover:text-blue-800">
                               Editar
                             </button>
-                            <button onClick={() => handleCancel(request.id)} className="text-xs font-medium text-red-600 hover:text-red-800">
+                            <button onClick={() => handleCancel(request.id)} className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800">
                               Cancelar
                             </button>
                           </div>
@@ -198,28 +198,28 @@ export default function EmployeeRequests() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h3 className="text-lg font-bold text-slate-900">{formData.id ? 'Editar permiso' : 'Nuevo permiso'}</h3>
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white dark:bg-slate-800 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{formData.id ? 'Editar permiso' : 'Nuevo permiso'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 p-6">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Tipo de permiso
-                <select required value={formData.tipoPermisoId} onChange={(event) => setFormData({ ...formData, tipoPermisoId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5">
+                <select required value={formData.tipoPermisoId} onChange={(event) => setFormData({ ...formData, tipoPermisoId: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5">
                   {types.map((type) => <option key={type.id} value={type.id}>{type.nombre}</option>)}
                 </select>
               </label>
               <div className="grid grid-cols-2 gap-4">
-                <label className="block text-sm font-medium text-slate-700">Desde<input required type="date" value={formData.fechaInicio} onChange={(event) => setFormData({ ...formData, fechaInicio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
-                <label className="block text-sm font-medium text-slate-700">Hasta<input required type="date" value={formData.fechaFin} onChange={(event) => setFormData({ ...formData, fechaFin: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Desde<input required type="date" value={formData.fechaInicio} onChange={(event) => setFormData({ ...formData, fechaInicio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Hasta<input required type="date" value={formData.fechaFin} onChange={(event) => setFormData({ ...formData, fechaFin: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label>
               </div>
-              <label className="block text-sm font-medium text-slate-700">Motivo<textarea required rows="3" value={formData.motivo} onChange={(event) => setFormData({ ...formData, motivo: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
-              <label className="block text-sm font-medium text-slate-700">Ruta del soporte (si aplica)<input value={formData.soporteRuta} onChange={(event) => setFormData({ ...formData, soporteRuta: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" /></label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Motivo<textarea required rows="3" value={formData.motivo} onChange={(event) => setFormData({ ...formData, motivo: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Ruta del soporte (si aplica)<input value={formData.soporteRuta} onChange={(event) => setFormData({ ...formData, soporteRuta: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" /></label>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg px-4 py-2 font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
                 <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-blue-700">{formData.id ? 'Guardar cambios' : 'Enviar solicitud'}</button>
               </div>
             </form>

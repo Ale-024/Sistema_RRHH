@@ -23,8 +23,24 @@ async function sembrarIam() {
       update: { nombre, descripcion, nivelAutoridad },
       create: { codigo, nombre, descripcion, nivelAutoridad },
     });
+
+    // Sincroniza la matriz de permisos tambien en bases ya sembradas:
+    // retira los que la matriz ya no asigna y agrega los nuevos.
+    const deseados = new Set(permisos);
+    const actuales = await prisma.rolPermiso.findMany({
+      where: { rolId: rol.id },
+      include: { permiso: true },
+    });
+    for (const relacion of actuales) {
+      if (!deseados.has(relacion.permiso.codigo)) {
+        await prisma.rolPermiso.delete({
+          where: { rolId_permisoId: { rolId: rol.id, permisoId: relacion.permisoId } },
+        });
+      }
+    }
     for (const codigoPermiso of permisos) {
       const permiso = await prisma.permisoSistema.findUnique({ where: { codigo: codigoPermiso } });
+      if (!permiso) continue;
       await prisma.rolPermiso.upsert({
         where: { rolId_permisoId: { rolId: rol.id, permisoId: permiso.id } },
         update: {},

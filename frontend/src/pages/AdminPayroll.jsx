@@ -111,8 +111,8 @@ export default function AdminPayroll() {
     <div className="animate-in fade-in duration-500 space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Planilla</h1>
-          <p className="mt-1 text-slate-500">Calcula, revisa y cierra periodos de nómina.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Planilla</h1>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">Calcula, revisa y cierra periodos de nómina.</p>
         </div>
         {tienePermiso(user, 'planilla:crear') && (
           <button
@@ -126,12 +126,12 @@ export default function AdminPayroll() {
         )}
       </div>
 
-      {mensaje && <div className="rounded-lg bg-blue-50 p-4 text-sm font-medium text-blue-700">{mensaje}</div>}
+      {mensaje && <div className="rounded-lg bg-blue-50 dark:bg-blue-500/10 p-4 text-sm font-medium text-blue-700 dark:text-blue-400">{mensaje}</div>}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+            <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs uppercase text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-6 py-4">Código</th>
                 <th className="px-6 py-4">Fechas</th>
@@ -148,8 +148,8 @@ export default function AdminPayroll() {
                 const detalles = periodo.detalles ?? [];
                 return (
                   <Fragment key={periodo.id}>
-                  <tr className="border-b border-slate-100">
-                    <td className="px-6 py-4 font-medium text-slate-900">
+                  <tr className="border-b border-slate-100 dark:border-slate-700/60">
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
                       <button
                         type="button"
                         onClick={() => setExpandido(abierto ? null : periodo.id)}
@@ -159,18 +159,18 @@ export default function AdminPayroll() {
                         {abierto ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </button>
                       {periodo.codigo}
-                      <div className="text-xs text-slate-500">{periodo.tipo}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{periodo.tipo}</div>
                     </td>
                     <td className="px-6 py-4 text-xs">
                       {new Date(periodo.fechaInicio).toLocaleDateString()} —{' '}
                       {new Date(periodo.fechaFin).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium">
+                      <span className="rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-medium">
                         {calculando ? 'Calculando…' : estados[periodo.estado] || periodo.estado}
                       </span>
                       {periodo.errorCalculo && (
-                        <div className="mt-1 max-w-xs text-xs text-red-600">{periodo.errorCalculo}</div>
+                        <div className="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400">{periodo.errorCalculo}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">{periodo.detalles?.length ?? '—'}</td>
@@ -184,7 +184,7 @@ export default function AdminPayroll() {
                             type="button"
                             onClick={() => accion(periodo, 'calcular')}
                             title="Calcular"
-                            className="rounded-lg bg-blue-50 p-2 text-blue-700 disabled:opacity-50"
+                            className="rounded-lg bg-blue-50 dark:bg-blue-500/10 p-2 text-blue-700 dark:text-blue-400 disabled:opacity-50"
                             disabled={Boolean(procesando)}
                           >
                             {calculando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
@@ -195,7 +195,7 @@ export default function AdminPayroll() {
                             type="button"
                             onClick={() => accion(periodo, 'enviar-revision')}
                             title="Enviar a revisión"
-                            className="rounded-lg bg-amber-50 p-2 text-amber-700 disabled:opacity-50"
+                            className="rounded-lg bg-amber-50 dark:bg-amber-500/10 p-2 text-amber-700 dark:text-amber-400 disabled:opacity-50"
                             disabled={Boolean(procesando)}
                           >
                             <Send className="h-4 w-4" />
@@ -206,7 +206,7 @@ export default function AdminPayroll() {
                             type="button"
                             onClick={() => accion(periodo, 'cerrar')}
                             title="Cerrar"
-                            className="rounded-lg bg-green-50 p-2 text-green-700 disabled:opacity-50"
+                            className="rounded-lg bg-green-50 dark:bg-emerald-500/10 p-2 text-green-700 dark:text-emerald-400 disabled:opacity-50"
                             disabled={Boolean(procesando)}
                           >
                             <CheckCircle2 className="h-4 w-4" />
@@ -217,7 +217,7 @@ export default function AdminPayroll() {
                             type="button"
                             onClick={() => accion(periodo, 'registrar-pago')}
                             title="Registrar pago"
-                            className="rounded-lg bg-green-50 p-2 text-green-700 disabled:opacity-50"
+                            className="rounded-lg bg-green-50 dark:bg-emerald-500/10 p-2 text-green-700 dark:text-emerald-400 disabled:opacity-50"
                             disabled={Boolean(procesando)}
                           >
                             <FileText className="h-4 w-4" />
@@ -227,15 +227,15 @@ export default function AdminPayroll() {
                     </td>
                   </tr>
                   {abierto && (
-                    <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <tr className="border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/60">
                       <td colSpan="6" className="px-6 py-4">
-                        <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
+                        <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                           Empleados en {periodo.codigo}
                         </p>
                         {detalles.length ? (
-                          <table className="w-full text-left text-sm text-slate-600 border border-slate-200 bg-white">
+                          <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             <thead>
-                              <tr className="text-xs uppercase text-slate-500 border-b border-slate-200">
+                              <tr className="text-xs uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                                 <th className="px-4 py-2">Empleado</th>
                                 <th className="px-4 py-2">Identificación</th>
                                 <th className="px-4 py-2 text-right">Ingresos</th>
@@ -245,8 +245,8 @@ export default function AdminPayroll() {
                             </thead>
                             <tbody>
                               {detalles.map((d) => (
-                                <tr key={d.id} className="border-b last:border-b-0 border-slate-100">
-                                  <td className="px-4 py-2 font-medium text-slate-800">
+                                <tr key={d.id} className="border-b last:border-b-0 border-slate-100 dark:border-slate-700/60">
+                                  <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
                                     {d.empleado?.nombres} {d.empleado?.apellidos}
                                   </td>
                                   <td className="px-4 py-2 text-xs">{d.empleado?.dni || '—'}</td>
@@ -256,7 +256,7 @@ export default function AdminPayroll() {
                                   <td className="px-4 py-2 text-right font-mono">
                                     L {((d.totalDeduccionesCent ?? 0) / 100).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                                   </td>
-                                  <td className="px-4 py-2 text-right font-mono font-semibold text-green-700">
+                                  <td className="px-4 py-2 text-right font-mono font-semibold text-green-700 dark:text-emerald-400">
                                     L {((d.netoPagarCent ?? 0) / 100).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>
@@ -289,9 +289,9 @@ export default function AdminPayroll() {
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="font-bold text-slate-900">Nuevo periodo</h3>
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-slate-800 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 px-6 py-4">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Nuevo periodo</h3>
               <button type="button" onClick={() => setModal(false)} aria-label="Cerrar" disabled={procesando === 'crear'}>
                 <XCircle className="h-6 w-6 text-slate-400" />
               </button>
@@ -302,13 +302,13 @@ export default function AdminPayroll() {
                 placeholder="Código, ej. 2026-08-M"
                 value={form.codigo}
                 onChange={(event) => setForm({ ...form, codigo: event.target.value })}
-                className="rounded-lg border border-slate-300 p-2.5"
+                className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5"
               />
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={form.tipo}
                   onChange={(event) => setForm({ ...form, tipo: event.target.value })}
-                  className="rounded-lg border border-slate-300 p-2.5"
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5"
                 >
                   <option value="ORDINARIA">Ordinaria</option>
                   <option value="DECIMO_TERCERO">Décimo tercero</option>
@@ -318,7 +318,7 @@ export default function AdminPayroll() {
                 <select
                   value={form.periodicidad}
                   onChange={(event) => setForm({ ...form, periodicidad: event.target.value })}
-                  className="rounded-lg border border-slate-300 p-2.5"
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5"
                 >
                   <option value="MENSUAL">Mensual</option>
                   <option value="QUINCENAL">Quincenal</option>
@@ -326,15 +326,15 @@ export default function AdminPayroll() {
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <input required type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
-                <input required type="date" value={form.fechaFin} onChange={(event) => setForm({ ...form, fechaFin: event.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
+                <input required type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
+                <input required type="date" value={form.fechaFin} onChange={(event) => setForm({ ...form, fechaFin: event.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </div>
-              <label className="text-sm text-slate-600">
+              <label className="text-sm text-slate-600 dark:text-slate-400">
                 Fecha de pago
-                <input required type="date" value={form.fechaPago} onChange={(event) => setForm({ ...form, fechaPago: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" />
+                <input required type="date" value={form.fechaPago} onChange={(event) => setForm({ ...form, fechaPago: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </label>
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setModal(false)} className="rounded-lg px-4 py-2 text-slate-600" disabled={procesando === 'crear'}>Cancelar</button>
+                <button type="button" onClick={() => setModal(false)} className="rounded-lg px-4 py-2 text-slate-600 dark:text-slate-400" disabled={procesando === 'crear'}>Cancelar</button>
                 <button type="submit" className="rounded-lg bg-brand-blue px-4 py-2 font-medium text-white disabled:opacity-60" disabled={procesando === 'crear'}>
                   {procesando === 'crear' ? 'Creando…' : 'Crear periodo'}
                 </button>

@@ -22,7 +22,9 @@ const esquemaAsignarRol = z.object({
 });
 
 const esquemaSolicitud = z.object({
-  beneficiarioId: z.coerce.number().int().positive(),
+  beneficiarioId: z.coerce.number().int().positive().optional(),
+  // DIRECCION no tiene listados de usuarios/empleados: puede indicar el correo.
+  email: z.string().trim().email().optional(),
   rolCodigo: z.string().min(2).max(30),
   scopeDepartamentoId: z.coerce.number().int().positive().optional(),
   motivo: z.string().trim().max(500).optional(),
@@ -168,8 +170,8 @@ function rutasAdminUsuarios(ctx) {
 
   router.get(
     '/autorizaciones-rol',
-    // 'planilla:cerrar' identifica a DIRECCION, autorizador del anexo.
-    exigirCualquiera('usuarios:administrar', 'solicitudes:revisar', 'planilla:cerrar'),
+    // 'autorizaciones:decidir' identifica a DIRECCION, autorizador del anexo.
+    exigirCualquiera('usuarios:administrar', 'autorizaciones:decidir', 'solicitudes:revisar'),
     async (_req, res, next) => {
       try {
         res.json(await listarAutorizaciones(ctx));

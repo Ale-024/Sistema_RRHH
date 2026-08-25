@@ -88,7 +88,7 @@ async function quitarRol(usuarioId, rolId, ctx) {
  * EMPLEADO/ENCUESTADOR: RRHH_SUP. RRHH_SUP: DIRECCION. ADMIN_TI: otro ADMIN_TI.
  * GERENTE_DEPTO: RRHH_SUP. DIRECCION: otro DIRECCION.
  */
-async function solicitarAutorizacion({ beneficiarioId, rolCodigo, scopeDepartamentoId, motivo }, ctx) {
+async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDepartamentoId, motivo }, ctx) {
   const { prisma, ejecutor } = ctx;
   if (!ejecutor?.id || !Array.isArray(ejecutor.roles)) {
     throw new ErrorAplicacion('EJECUTOR_AUSENTE', 500, 'Sesion sin roles identificables.');
@@ -99,7 +99,16 @@ async function solicitarAutorizacion({ beneficiarioId, rolCodigo, scopeDepartame
 
   validarSolicitud(ejecutor.roles.map((r) => r.codigo ?? r), rol.codigo);
 
-  const beneficiario = await prisma.usuario.findUnique({ where: { id: beneficiarioId } });
+  // Resolucion del beneficiario: por id o por correo (DIRECCION no maneja
+  // listados de usuarios; el formulario le permite escribir el correo).
+  let beneficiario = null;
+  if (beneficiarioId) {
+    beneficiario = await prisma.usuario.findUnique({ where: { id: beneficiarioId } });
+  } else if (email) {
+    beneficiario = await prisma.usuario.findUnique({ where: { email: email.toLowerCase() } });
+  } else {
+    throw new ErrorAplicacion('DATOS_INVALIDOS', 422, 'Indica el beneficiario (id o correo).');
+  }
   if (!beneficiario) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Usuario beneficiario no encontrado.');
 
   const yaVigente = await prisma.autorizacionRol.findFirst({

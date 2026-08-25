@@ -38,6 +38,7 @@ const PERMISOS = [
   ['reportes:ver_global', 'Consultar reportes globales y costos de planilla'],
   ['reportes:administrar', 'Refrescar proyecciones de reportes'],
   ['observabilidad:leer', 'Consultar metricas operativas'],
+  ['autorizaciones:decidir', 'Autorizar o rechazar solicitudes de roles elevados (Anexo de autoridad)'],
 ];
 
 /**
@@ -63,7 +64,7 @@ const ROLES = [
     codigo: 'RRHH_SUP',
     nivelAutoridad: 50,
     nombre: 'Supervisor de RRHH',
-    descripcion: 'Gestion completa de personal, catalogos y revision de solicitudes.',
+    descripcion: 'Gestion de personal, catalogos, revision de solicitudes y procesamiento/cierre de planilla (CU01-CU05).',
     permisos: [
       'empleados:leer',
       'empleados:leer_global',
@@ -85,7 +86,11 @@ const ROLES = [
       'planilla:leer',
       'planilla:crear',
       'planilla:calcular',
+      'planilla:cerrar',
+      'planilla:registrar_pago',
       'planilla:administrar',
+      'parametros:leer',
+      'parametros:administrar',
       'reportes:ver',
       'reportes:administrar',
     ],
@@ -94,15 +99,15 @@ const ROLES = [
     codigo: 'GERENTE_DEPTO',
     nivelAutoridad: 30,
     nombre: 'Gerente de departamento',
-    descripcion: 'Visibilidad limitada a su departamento mediante scope ABAC.',
-    permisos: ['empleados:leer', 'asistencia:leer_global', 'solicitudes:revisar', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'reportes:ver'],
+    descripcion: 'Consulta reportes de asistencia, ausentismo y personal limitados a su departamento (CU06.1, CU06.2).',
+    permisos: ['reportes:ver'],
   },
   {
     codigo: 'DIRECCION',
     nivelAutoridad: 90,
     nombre: 'Direccion general',
-    descripcion: 'Lectura global de planilla y auditoria; autorizacion de cierres; administracion de parametros legales.',
-    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'reportes:ver_global'],
+    descripcion: 'Consulta consolidada de reportes y planilla (CU06.3); autoriza roles elevados. Sin operaciones operativas.',
+    permisos: ['planilla:leer_global', 'planilla:leer', 'reportes:ver_global', 'autorizaciones:decidir'],
   },
   {
     codigo: 'ADMIN_TI',

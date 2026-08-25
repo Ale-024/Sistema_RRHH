@@ -99,8 +99,8 @@ export default function AdminParameters() {
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Parámetros legales</h1>
-          <p className="mt-1 text-slate-500">Las nuevas vigencias afectan únicamente cálculos futuros.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Parámetros legales</h1>
+          <p className="mt-1 text-slate-500 dark:text-slate-400">Las nuevas vigencias afectan únicamente cálculos futuros.</p>
         </div>
         {puedeAdministrar && (
           <button onClick={() => setModalCrear(true)} className="flex items-center rounded-lg bg-brand-blue px-4 py-2 font-medium text-white hover:bg-brand-DEFAULT">
@@ -109,11 +109,11 @@ export default function AdminParameters() {
         )}
       </div>
 
-      {mensaje && <div className="rounded-lg border-l-4 border-green-600 bg-green-50 p-4 text-sm text-green-700">{mensaje}</div>}
+      {mensaje && <div className="rounded-lg border-l-4 border-green-600 bg-green-50 dark:bg-emerald-500/10 p-4 text-sm text-green-700 dark:text-emerald-400">{mensaje}</div>}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm text-slate-600">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+        <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
+          <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs uppercase text-slate-500 dark:text-slate-400">
             <tr>
               <th className="px-6 py-4">Clave</th>
               <th className="px-6 py-4">Valor</th>
@@ -126,13 +126,13 @@ export default function AdminParameters() {
             {items.map((item) => {
               const vencida = item.vigenciaHasta && new Date(item.vigenciaHasta) < new Date();
               return (
-                <tr key={item.id} className="border-b border-slate-100">
-                  <td className="px-6 py-4 font-medium text-slate-900">{item.clave}</td>
+                <tr key={item.id} className="border-b border-slate-100 dark:border-slate-700/60">
+                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{item.clave}</td>
                   <td className="px-6 py-4">{item.valor}</td>
                   <td className="px-6 py-4">{item.unidad || '—'}</td>
                   <td className="px-6 py-4 text-xs">
                     {new Date(item.vigenciaDesde).toLocaleDateString()} — {item.vigenciaHasta ? new Date(item.vigenciaHasta).toLocaleDateString() : 'abierta'}
-                    {vencida && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase text-slate-400">histórico</span>}
+                    {vencida && <span className="ml-2 rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] uppercase text-slate-400">histórico</span>}
                   </td>
                   {puedeAdministrar && (
                     <td className="px-6 py-4 text-right">
@@ -158,25 +158,25 @@ export default function AdminParameters() {
       {/* Modal de creacion */}
       {modalCrear && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="font-bold text-slate-900">Nueva vigencia</h3>
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-slate-800 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 px-6 py-4">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Nueva vigencia</h3>
               <button type="button" onClick={() => setModalCrear(false)} aria-label="Cerrar"><XCircle className="h-6 w-6 text-slate-400" /></button>
             </div>
             <form onSubmit={crear} className="grid gap-4 p-6">
-              <input required placeholder="Clave (ej. SALARIO_MINIMO)" value={form.clave} onChange={(e) => setForm({ ...form, clave: e.target.value.toUpperCase() })} className="rounded-lg border border-slate-300 p-2.5" />
+              <input required placeholder="Clave (ej. SALARIO_MINIMO)" value={form.clave} onChange={(e) => setForm({ ...form, clave: e.target.value.toUpperCase() })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               <div className="grid grid-cols-2 gap-4">
-                <input required placeholder="Valor" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
-                <input placeholder="Unidad (MONTO_CENT, PORCENTAJE…)" value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
+                <input required placeholder="Valor" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
+                <input placeholder="Unidad (MONTO_CENT, PORCENTAJE…)" value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </div>
-              <label className="text-sm text-slate-600">
+              <label className="text-sm text-slate-600 dark:text-slate-400">
                 Vigencia desde
-                <input required type="date" value={form.vigenciaDesde} onChange={(e) => setForm({ ...form, vigenciaDesde: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" />
+                <input required type="date" value={form.vigenciaDesde} onChange={(e) => setForm({ ...form, vigenciaDesde: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </label>
-              <input placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
-              <input placeholder="Base legal" value={form.baseLegal} onChange={(e) => setForm({ ...form, baseLegal: e.target.value })} className="rounded-lg border border-slate-300 p-2.5" />
+              <input placeholder="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
+              <input placeholder="Base legal" value={form.baseLegal} onChange={(e) => setForm({ ...form, baseLegal: e.target.value })} className="rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setModalCrear(false)} className="rounded-lg px-4 py-2 text-slate-600">Cancelar</button>
+                <button type="button" onClick={() => setModalCrear(false)} className="rounded-lg px-4 py-2 text-slate-600 dark:text-slate-400">Cancelar</button>
                 <button type="submit" disabled={procesando} className="flex items-center rounded-lg bg-brand-blue px-4 py-2 font-medium text-white disabled:opacity-60">
                   {procesando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Guardar
                 </button>
@@ -189,39 +189,39 @@ export default function AdminParameters() {
       {/* Modal de edicion con confirmacion */}
       {edicion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h3 className="font-bold text-slate-900">Editar «{edicion.item.clave}»</h3>
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-slate-800 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 px-6 py-4">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Editar «{edicion.item.clave}»</h3>
               <button type="button" onClick={() => setEdicion(null)} aria-label="Cerrar"><XCircle className="h-6 w-6 text-slate-400" /></button>
             </div>
             <div className="space-y-4 p-6">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-                <p className="text-slate-500">Valor actual</p>
-                <p className="font-mono text-base font-semibold text-slate-800">{edicion.item.valor}</p>
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3 text-sm">
+                <p className="text-slate-500 dark:text-slate-400">Valor actual</p>
+                <p className="font-mono text-base font-semibold text-slate-800 dark:text-slate-100">{edicion.item.valor}</p>
               </div>
-              <label className="block text-sm text-slate-600">
+              <label className="block text-sm text-slate-600 dark:text-slate-400">
                 Nuevo valor
-                <input value={edicion.valor} onChange={(e) => setEdicion({ ...edicion, valor: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-mono" />
+                <input value={edicion.valor} onChange={(e) => setEdicion({ ...edicion, valor: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 font-mono" />
               </label>
-              <label className="block text-sm text-slate-600">
+              <label className="block text-sm text-slate-600 dark:text-slate-400">
                 Descripción
-                <input value={edicion.descripcion} onChange={(e) => setEdicion({ ...edicion, descripcion: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" />
+                <input value={edicion.descripcion} onChange={(e) => setEdicion({ ...edicion, descripcion: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </label>
-              <label className="block text-sm text-slate-600">
+              <label className="block text-sm text-slate-600 dark:text-slate-400">
                 Base legal
-                <input value={edicion.baseLegal} onChange={(e) => setEdicion({ ...edicion, baseLegal: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5" />
+                <input value={edicion.baseLegal} onChange={(e) => setEdicion({ ...edicion, baseLegal: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5" />
               </label>
-              <label className="block text-sm text-slate-600">
+              <label className="block text-sm text-slate-600 dark:text-slate-400">
                 Motivo del cambio <span className="text-red-500">*</span>
                 <textarea
                   rows={2}
                   value={edicion.motivo}
                   onChange={(e) => setEdicion({ ...edicion, motivo: e.target.value })}
                   placeholder="Ej.: Ajuste según acuerdo ministerial publicado el…"
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2.5"
+                  className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 p-2.5"
                 />
               </label>
-              <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
                 <input
                   type="checkbox"
                   checked={confirmado}
@@ -230,9 +230,9 @@ export default function AdminParameters() {
                 />
                 Entiendo que este cambio afecta los cálculos de planilla futuros y quedará registrado en auditoría con mi usuario.
               </label>
-              {errorEdicion && <p className="text-sm text-red-600">{errorEdicion}</p>}
+              {errorEdicion && <p className="text-sm text-red-600 dark:text-red-400">{errorEdicion}</p>}
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setEdicion(null)} className="rounded-lg px-4 py-2 text-slate-600">Cancelar</button>
+                <button type="button" onClick={() => setEdicion(null)} className="rounded-lg px-4 py-2 text-slate-600 dark:text-slate-400">Cancelar</button>
                 <button
                   type="button"
                   onClick={guardarEdicion}

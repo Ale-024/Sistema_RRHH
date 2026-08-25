@@ -62,7 +62,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col sm:flex-row">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-700 flex flex-col sm:flex-row">
       {/* ── Panel de marca ─────────────────────────────────────────── */}
       <div className="relative sm:w-[45%] bg-brand-DEFAULT overflow-hidden flex flex-col justify-between p-8 lg:p-14">
         {/* Textura geométrica discreta */}
@@ -115,28 +115,28 @@ export default function Login() {
           <div className="sm:hidden mb-8 flex items-center gap-3">
             <Monograma tamano="w-9 h-9" texto="text-sm" />
             <div>
-              <p className="font-semibold tracking-[0.18em] uppercase text-sm text-slate-800">Marketing Total</p>
-              <p className="text-[10px] text-slate-500 tracking-widest uppercase">Gestión Humana</p>
+              <p className="font-semibold tracking-[0.18em] uppercase text-sm text-slate-800 dark:text-slate-100">Marketing Total</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 tracking-widest uppercase">Gestión Humana</p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
             <div className="h-1 bg-brand-blue" />
             <div className="p-8 lg:p-10">
-              <h1 className="text-lg font-semibold text-slate-800">Iniciar sesión</h1>
-              <p className="text-sm text-slate-500 mt-1 mb-7">
+              <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Iniciar sesión</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-7">
                 Use su cuenta corporativa para continuar.
               </p>
 
               {error && (
-                <div className="border-l-4 border-red-500 bg-red-50 text-red-700 px-4 py-3 text-sm mb-6">
+                <div className="border-l-4 border-red-500 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 px-4 py-3 text-sm mb-6">
                   {error}
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label htmlFor="correo" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label htmlFor="correo" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Correo electrónico
                   </label>
                   <input
@@ -146,14 +146,14 @@ export default function Login() {
                     autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm"
+                    className="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm"
                     placeholder="nombre@marketingtotal.hn"
                   />
                 </div>
 
                 {(requiereOtp || mfaSetup) && (
                   <div>
-                    <label htmlFor="otp" className="block text-sm font-medium text-slate-700 mb-1.5">
+                    <label htmlFor="otp" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                       Código de autenticación
                     </label>
                     <input
@@ -165,19 +165,19 @@ export default function Login() {
                       required
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm tracking-[0.3em]"
+                      className="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm tracking-[0.3em]"
                       placeholder="000000"
                     />
                     {mfaSetup && (
-                      <div className="mt-3 border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                        <p className="font-medium text-slate-700 mb-1">
+                      <div className="mt-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-3 text-xs text-slate-600 dark:text-slate-400">
+                        <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">
                           Configuración de segundo factor
                         </p>
                         <p>Agregue esta clave a su aplicación autenticadora:</p>
-                        <code className="block mt-1.5 font-mono text-slate-800 select-all break-all">
+                        <code className="block mt-1.5 font-mono text-slate-800 dark:text-slate-100 select-all break-all">
                           {mfaSetup.secret}
                         </code>
-                        <p className="mt-1.5 text-slate-500">
+                        <p className="mt-1.5 text-slate-500 dark:text-slate-400">
                           Luego ingrese el código de 6 dígitos y continúe.
                         </p>
                       </div>
@@ -186,7 +186,7 @@ export default function Login() {
                 )}
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Contraseña
                   </label>
                   <input
@@ -196,7 +196,7 @@ export default function Login() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm"
+                    className="block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-1 focus:ring-brand-blue focus:border-brand-blue sm:text-sm"
                   />
                 </div>
 

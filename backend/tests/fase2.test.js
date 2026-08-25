@@ -111,14 +111,14 @@ afterAll(async () => {
 });
 
 describe('Fase 2: seguridad y reglas', () => {
-  it('un GERENTE_DEPTO solo ve empleados de su departamento', async () => {
+  it('un GERENTE_DEPTO no consulta expedientes: solo reportes de su alcance', async () => {
+    // La matriz vigente (spec de actores) limita al gerente a CU06.1/CU06.2:
+    // el listado de expedientes exige empleados:leer, que ya no posee.
     const token = await login('gerente@test.hn');
     const res = await request(app)
       .get('/api/admin/employees')
       .set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    const deptos = new Set(res.body.map((e) => e.puesto.departamento.nombre));
-    expect(deptos).toEqual(new Set(['Depto A']));
+    expect(res.status).toBe(403);
   });
 
   it('RRHH con lectura global ve todos los departamentos', async () => {
