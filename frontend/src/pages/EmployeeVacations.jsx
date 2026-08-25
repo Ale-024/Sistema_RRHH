@@ -59,7 +59,12 @@ export default function EmployeeVacations() {
       setEnviando(true);
       setErrorFormulario('');
       try {
-      const creada = await api.post('/employee/vacaciones/solicitudes', { ...form, periodoId: Number(form.periodoId), ...(form.suplenteId ? { suplenteId: Number(form.suplenteId) } : {}) });
+      const creada = await api.post('/employee/vacaciones/solicitudes', {
+        periodoId: Number(form.periodoId),
+        fechaInicio: form.fechaInicio,
+        fechaFin: form.fechaFin,
+        ...(form.suplenteId ? { suplenteId: Number(form.suplenteId) } : {}),
+      });
       await api.post(`/employee/vacaciones/solicitudes/${creada.data.data.id}/enviar`, {});
       setModal(false);
       setMessage('Solicitud de vacaciones enviada a revisión.');

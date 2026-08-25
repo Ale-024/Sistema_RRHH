@@ -8,9 +8,15 @@ const fechas = z.object({
   path: ['fechaFin'],
 });
 
+// Suplente opcional: el formulario envia cadena vacia cuando no hay suplente.
+const suplenteOpcional = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined ? undefined : v),
+  z.coerce.number().int().positive().optional()
+);
+
 const crearSolicitud = fechas.extend({
   periodoId: z.coerce.number().int().positive(),
-  suplenteId: z.coerce.number().int().positive().optional(),
+  suplenteId: suplenteOpcional,
 });
 
 const idNumerico = z.object({ id: z.coerce.number().int().positive() });
