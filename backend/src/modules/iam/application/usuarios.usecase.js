@@ -161,7 +161,11 @@ async function quitarRol(usuarioId, rolId, ctx) {
 
   const restantes = await prisma.usuarioRol.count({ where: { usuarioId } });
   if (restantes <= 1) {
-    throw new ErrorAplicacion('ULTIMO_ROL', 409, 'El usuario debe conservar al menos un rol.');
+    throw new ErrorAplicacion(
+      'ULTIMO_ROL',
+      409,
+      'El usuario solo tiene este rol y debe conservar al menos uno: usa una solicitud de cambio de rol (revocar indicando el nuevo rol) en lugar de una revocacion simple.'
+    );
   }
 
   await prisma.usuarioRol.delete({

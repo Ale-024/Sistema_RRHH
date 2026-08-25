@@ -142,6 +142,13 @@ export default function AdminUsuarios() {
     }
   };
 
+  // Una revocacion simple (sin rol destino) sobre el unico rol del usuario
+  // siempre fallaria: debe solicitarse como cambio de rol (con destino).
+  const revocacionImposible = (a) =>
+    a.accion === 'REVOCAR' &&
+    !a.rolDestino &&
+    usuarios.find((u) => u.id === a.beneficiarioId)?.roles?.length <= 1;
+
   // Ejecuta la autorizacion: OTORGAR asigna el rol; REVOCAR lo retira o,
   // si trae rol destino, aplica el cambio completo en un solo acto.
   const ejecutarAutorizacion = async (aut) => {
@@ -345,6 +352,13 @@ export default function AdminUsuarios() {
                         >
                           <UserCog className="w-3.5 h-3.5 mr-1" /> Asignar (rol base)
                         </button>
+                      ) : a.estado === 'AUTORIZADA' && !a.consumidaEn && puedeGestionar && revocacionImposible(a) ? (
+                        <span
+                          className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          title="Es el único rol del usuario: solicita un cambio de rol (revocar indicando el nuevo rol)."
+                        >
+                          Requiere cambio de rol
+                        </span>
                       ) : a.estado === 'AUTORIZADA' && !a.consumidaEn && puedeGestionar ? (
                         <button
                           onClick={() => ejecutarAutorizacion(a)}
