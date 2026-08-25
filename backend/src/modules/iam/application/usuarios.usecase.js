@@ -41,7 +41,7 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
   const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
   if (!usuario) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Usuario no encontrado.');
 
-  const { rol } = await validarEjecucion(prisma, {
+  const { rol, autorizacion } = await validarEjecucion(prisma, {
     ejecutorId: ejecutor.id,
     beneficiarioId: usuarioId,
     rolCodigo,
@@ -59,6 +59,15 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
       asignadoPorId: ejecutor.id,
     },
   });
+
+  // Cierra el ciclo: la autorizacion queda CONSUMIDA y desaparece de la
+  // bandeja ejecutable (el trigger ya estampo consumidaEn en el INSERT).
+  if (autorizacion) {
+    await prisma.autorizacionRol.update({
+      where: { id: autorizacion.id },
+      data: { estado: 'CONSUMIDA', consumidaEn: new Date() },
+    });
+  }
 
   return {
     message: `Rol ${rolCodigo} asignado.`,

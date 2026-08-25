@@ -292,7 +292,7 @@ export default function AdminUsuarios() {
                             <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
                           </button>
                         </div>
-                      ) : a.estado === 'AUTORIZADA' && puedeGestionar ? (
+                      ) : a.estado === 'AUTORIZADA' && !a.consumidaEn && puedeGestionar ? (
                         <button
                           onClick={() => ejecutarAutorizacion(a)}
                           disabled={Boolean(procesando)}
@@ -300,6 +300,10 @@ export default function AdminUsuarios() {
                         >
                           <UserCog className="w-3.5 h-3.5 mr-1" /> Ejecutar asignación
                         </button>
+                      ) : a.estado === 'CONSUMIDA' || a.consumidaEn ? (
+                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          Ejecutada
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}
