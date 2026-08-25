@@ -113,18 +113,18 @@ function crearPdfReporte(titulo, filas, meta = {}) {
 
     // Banner de marca
     ops.push(`${PDF_VERDE} rg`, `${margenX} ${yBanner} ${tablaAncho} 52 re f`);
-    ops.push(celdaPdf('MARKETING TOTAL', margenX + 14, yBanner + 30, 'F2', 14, '1 1 1 rg'));
-    ops.push(celdaPdf(`Gestión Humana · Reporte de ${titulo}`, margenX + 14, yBanner + 13, 'F1', 9, '1 1 1 rg'));
-    ops.push(celdaPdf(generado, anchoPagina - margenX - 172, yBanner + 30, 'F1', 7.5, '0.85 0.92 0.88 rg'));
+    ops.push(celdaPdf('MARKETING TOTAL', margenX + 14, yBanner + 30, 'F2', 14, '1 1 1'));
+    ops.push(celdaPdf(`Gestión Humana · Reporte de ${titulo}`, margenX + 14, yBanner + 13, 'F1', 9, '1 1 1'));
+    ops.push(celdaPdf(generado, anchoPagina - margenX - 172, yBanner + 30, 'F1', 7.5, '0.85 0.92 0.88'));
 
     // Resumen
-    ops.push(celdaPdf(`Registros: ${filas.length}${meta.periodo ? ` · ${meta.periodo}` : ''}`, margenX, yBanner - 20, 'F1', 8, '0.35 0.40 0.45 rg'));
+    ops.push(celdaPdf(`Registros: ${filas.length}${meta.periodo ? ` · ${meta.periodo}` : ''}`, margenX, yBanner - 20, 'F1', 8, '0.35 0.40 0.45'));
 
     // Encabezado de tabla
     let y = tablaY;
     ops.push(`${PDF_GRIS_BANDA} rg`, `${margenX} ${y - filaAlto + 5} ${tablaAncho} ${filaAlto} re f`);
     columnas.forEach((columna, i) => {
-      ops.push(celdaPdf(truncarPdf(String(columna).toUpperCase(), maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F2', 8, '0.10 0.15 0.12 rg'));
+      ops.push(celdaPdf(truncarPdf(String(columna).toUpperCase(), maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F2', 8, '0.10 0.15 0.12'));
     });
 
     // Filas alternadas
