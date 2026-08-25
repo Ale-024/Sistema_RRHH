@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Clock, LogIn, LogOut, MapPin, Loader2, CalendarDays } from 'lucide-react';
+import { Clock, LogIn, LogOut, MapPin, Loader2, CalendarDays, Briefcase } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 const ESTILOS_ESTADO = {
   PRESENTE: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
@@ -14,12 +15,17 @@ const ESTILOS_ESTADO = {
 };
 
 export default function EmployeeAttendance() {
+  const { user } = useAuthStore();
   const [registros, setRegistros] = useState([]);
   const [estadoHoy, setEstadoHoy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [marcando, setMarcando] = useState(false);
   const [mensaje, setMensaje] = useState({ type: '', text: '' });
   const [usarGps, setUsarGps] = useState(false);
+  // RF-16 / CU02.2: proyecto de campo vinculado al marcaje del encuestador.
+  const esEncuestador = user?.rol === 'ENCUESTADOR';
+  const [proyectos, setProyectos] = useState([]);
+  const [proyectoId, setProyectoId] = useState('');
 
   const cargar = async () => {
     try {
@@ -41,7 +47,16 @@ export default function EmployeeAttendance() {
     // react(set-state-in-effect) es un falso positivo en este patron.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, []);
+
+  // CU01.5: proyectos asignados al encuestador de campo.
+  useEffect(() => {
+    if (!esEncuestador) return;
+    api.get('/employee/proyectos')
+      .then((r) => setProyectos(r.data ?? []))
+      .catch(() => setProyectos([]));
+  }, [esEncuestador]);
 
 
   const marcar = async () => {
@@ -63,6 +78,8 @@ export default function EmployeeAttendance() {
           );
         });
       }
+      // RF-16: el marcaje de campo se vincula al proyecto seleccionado.
+      if (esEncuestador && proyectoId) cuerpo.proyectoId = Number(proyectoId);
       const res = await api.post('/employee/attendance', cuerpo);
       setMensaje({ type: 'success', text: res.data.message });
       await cargar();
@@ -89,6 +106,20 @@ export default function EmployeeAttendance() {
         </div>
 
         <div className="flex flex-col items-end gap-2">
+          {esEncuestador && proyectos.length > 0 && (
+            <select
+              value={proyectoId}
+              onChange={(e) => setProyectoId(e.target.value)}
+              className="text-sm border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900/40 text-slate-700 dark:text-slate-200"
+            >
+              <option value="">Sin proyecto (marca general)</option>
+              {proyectos.map((p) => (
+                <option key={p.id} value={p.proyecto.id}>
+                  {p.proyecto.codigo} · {p.proyecto.nombre}
+                </option>
+              ))}
+            </select>
+          )}
           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
             <input
               type="checkbox"
@@ -158,7 +189,7 @@ export default function EmployeeAttendance() {
                 {registros.map((r) => (
                   <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-6 py-3 font-medium">
-                      {new Date(r.fecha).toLocaleDateString('es-HN')}
+                      {new Date(r.fecha).toLocaleDateString('es-HN', { timeZone: 'UTC' })}
                       {r.cerrado && (
                         <span className="ml-2 text-[10px] uppercase bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                           cerrado
@@ -210,6 +241,37 @@ export default function EmployeeAttendance() {
                 {m.tipo === 'ENTRADA' ? 'Entrada' : 'Salida'}
                 <strong>{new Date(m.ocurridoEn).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}</strong>
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CU01.5: proyectos asignados (encuestador de campo) */}
+      {esEncuestador && proyectos.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Briefcase className="w-4 h-4" /> Mis proyectos asignados
+            </h3>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+            {proyectos.map((p) => (
+              <div key={p.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    <span className="text-slate-400 mr-1.5">{p.proyecto.codigo}</span>
+                    {p.proyecto.nombre}
+                  </p>
+                  {p.proyecto.descripcion && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{p.proyecto.descripcion}</p>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {Math.round((p.porcentajeDedicacion ?? 1) * 100)}% dedicación
+                  {' · '}desde {new Date(p.desde).toLocaleDateString('es-HN')}
+                  {p.hasta ? ` · hasta ${new Date(p.hasta).toLocaleDateString('es-HN')}` : ' · vigente'}
+                </div>
+              </div>
             ))}
           </div>
         </div>

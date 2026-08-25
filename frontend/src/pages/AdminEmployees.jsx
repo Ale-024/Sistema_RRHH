@@ -11,6 +11,8 @@ export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  // Contrato vigente del empleado en edicion: fuente del salario actual.
+  const [contratoVigente, setContratoVigente] = useState(null);
   const [positions, setPositions] = useState([]);
   const [formData, setFormData] = useState({
     email: '', password: '', nombres: '', apellidos: '',
@@ -66,6 +68,9 @@ export default function AdminEmployees() {
 
   const openEditModal = (emp) => {
     setEditingEmployee(emp);
+    // El salario vive en el contrato vigente (versionado), no en el expediente.
+    const contrato = emp.contratos?.[0] ?? null;
+    setContratoVigente(contrato);
     setFormData({
       email: emp.usuario?.email || '',
       password: '',
@@ -76,7 +81,7 @@ export default function AdminEmployees() {
       direccion: emp.direccion || '',
       puesto_id: emp.puesto_id?.toString() || '',
       fecha_ingreso: emp.fecha_ingreso ? emp.fecha_ingreso.split('T')[0] : '',
-      salario: emp.salario?.toString() || ''
+      salario: contrato ? (contrato.salarioBaseCent / 100).toString() : ''
     });
     setShowModal(true);
   };
@@ -95,7 +100,21 @@ export default function AdminEmployees() {
       };
       if (editingEmployee) {
         await api.put(`/admin/employees/${editingEmployee.id}`, base);
-        setMessage({ type: 'success', text: 'Empleado actualizado exitosamente' });
+        // El salario vive en el contrato: si cambia, se emite un contrato
+        // nuevo que cierra el vigente (versionado + historial laboral).
+        const salarioNuevo = Number(formData.salario);
+        const salarioActual = contratoVigente ? contratoVigente.salarioBaseCent / 100 : null;
+        if (contratoVigente && Number.isFinite(salarioNuevo) && salarioNuevo !== salarioActual) {
+          await api.post(`/admin/employees/${editingEmployee.id}/contratos`, {
+            modalidad: contratoVigente.modalidad ?? 'PERMANENTE',
+            salario: salarioNuevo,
+            periodicidad: contratoVigente.periodicidad ?? 'MENSUAL',
+            vigenciaDesde: new Date().toISOString().slice(0, 10),
+          });
+          setMessage({ type: 'success', text: 'Empleado actualizado. Se emitió un nuevo contrato con el salario ajustado.' });
+        } else {
+          setMessage({ type: 'success', text: 'Empleado actualizado exitosamente' });
+        }
       } else {
         await api.post('/admin/employees', {
           ...base,

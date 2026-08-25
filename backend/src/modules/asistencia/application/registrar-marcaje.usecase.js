@@ -9,9 +9,29 @@ const { consolidarDia } = require('./consolidar-dia.usecase');
  * Los umbrales de tardanza ya no viven aqui: los resuelve el consolidado
  * contra el turno asignado.
  */
-async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, ctx) {
+async function registrarMarcaje(empleadoId, { latitud, longitud, proyectoId, dispositivo }, ctx) {
   const { prisma, clock, bus } = ctx;
   const ahora = clock.ahora();
+
+  // RF-16 / CU02.2: el marcaje de campo solo puede referenciar un proyecto
+  // efectivamente asignado al empleado (agregacion Proyecto-Empleado).
+  if (proyectoId != null) {
+    const asignacion = await prisma.asignacionProyecto.findFirst({
+      where: {
+        empleadoId,
+        proyectoId,
+        OR: [{ hasta: null }, { hasta: { gt: ahora } }],
+      },
+      select: { id: true },
+    });
+    if (!asignacion) {
+      throw new ErrorAplicacion(
+        'PROYECTO_NO_ASIGNADO',
+        422,
+        'El proyecto indicado no esta asignado a tu expediente.'
+      );
+    }
+  }
 
   const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
   const finDia = new Date(inicioDia);
@@ -76,6 +96,7 @@ async function registrarMarcaje(empleadoId, { latitud, longitud, dispositivo }, 
         dispositivo: dispositivo ?? 'web',
         latitud: latitud ?? null,
         longitud: longitud ?? null,
+        proyectoId: proyectoId ?? null,
         hashEvento: hashEvento(empleadoId, ahora, tipo),
       },
     });

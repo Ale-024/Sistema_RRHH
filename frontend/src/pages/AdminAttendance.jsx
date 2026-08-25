@@ -219,7 +219,9 @@ export default function AdminAttendance() {
                 {registros.map((r) => (
                   <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {new Date(r.fecha).toLocaleDateString('es-HN')}
+                      {/* La fecha consolidada es medianoche UTC: se renderiza en
+                          UTC para no retroceder un dia en husos horarios negativos. */}
+                      {new Date(r.fecha).toLocaleDateString('es-HN', { timeZone: 'UTC' })}
                       {r.cerrado && <span className="ml-1.5 text-[10px] uppercase bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded">cerrado</span>}
                     </td>
                     <td className="px-4 py-3">{r.empleado?.nombres} {r.empleado?.apellidos}</td>

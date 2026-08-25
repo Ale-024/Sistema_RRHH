@@ -53,6 +53,37 @@ function rutasEmpleado(ctx) {
     }
   });
 
+  // CU01.5: proyectos asignados al empleado (encuestador de campo).
+  router.get('/proyectos', async (req, res, next) => {
+    try {
+      if (!req.user.empleado_id) {
+        throw new ErrorAplicacion('SIN_EMPLEADO', 404, 'El usuario no tiene expediente de empleado.');
+      }
+      const ahora = new Date();
+      const asignaciones = await ctx.prisma.asignacionProyecto.findMany({
+        where: {
+          empleadoId: req.user.empleado_id,
+          OR: [{ hasta: null }, { hasta: { gte: ahora } }],
+        },
+        orderBy: { desde: 'desc' },
+        include: {
+          proyecto: { select: { id: true, codigo: true, nombre: true, descripcion: true, activo: true } },
+        },
+      });
+      res.json(
+        asignaciones.map((a) => ({
+          id: a.id,
+          desde: a.desde,
+          hasta: a.hasta,
+          porcentajeDedicacion: a.porcentajeDedicacion,
+          proyecto: a.proyecto,
+        }))
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.put(
     '/profile',
     validar({ body: esquemaPerfil }),

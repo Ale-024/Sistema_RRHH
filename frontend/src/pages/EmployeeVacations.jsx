@@ -11,11 +11,16 @@ const ESTADOS = {
 };
 
 const getReturnReason = (request) => {
-  if (request.estado !== 'SOLICITADO' || !request.historial) return null;
-  const devuelto = [...request.historial].reverse().find(
-    (h) => h.estadoAnterior === 'EN_REVISION' && h.estadoNuevo === 'SOLICITADO'
-  );
-  return devuelto?.motivo || null;
+if (request.estado !== 'SOLICITADO' || !request.historial) return null;
+const devuelto = [...request.historial].reverse().find(
+(h) => h.estadoAnterior === 'EN_REVISION' && h.estadoNuevo === 'SOLICITADO'
+);
+return devuelto?.motivo || null;
+};
+const getRechazoMotivo = (request) => {
+if (request.estado !== 'RECHAZADO' || !request.historial) return null;
+const rechazo = [...request.historial].reverse().find((h) => h.estadoNuevo === 'RECHAZADO');
+return rechazo?.motivo || null;
 };
 
 export default function EmployeeVacations() {
@@ -86,6 +91,9 @@ export default function EmployeeVacations() {
                 <div className="truncate">{solicitud.folio}</div>
                 {getReturnReason(solicitud) && (
                   <div className="mt-1 text-xs font-medium text-orange-600">Devuelto: {getReturnReason(solicitud)}</div>
+                )}
+                {getRechazoMotivo(solicitud) && (
+                  <div className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">Motivo del rechazo: {getRechazoMotivo(solicitud)}</div>
                 )}
               </td>
               <td className="px-6 py-4 text-xs">{new Date(solicitud.fechaInicio).toLocaleDateString()} — {new Date(solicitud.fechaFin).toLocaleDateString()}</td>

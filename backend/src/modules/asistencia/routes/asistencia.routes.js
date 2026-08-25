@@ -21,6 +21,8 @@ const esquemaMarcajePropio = z
   .object({
     latitud: z.coerce.number().min(-90).max(90).optional(),
     longitud: z.coerce.number().min(-180).max(180).optional(),
+    // RF-16 / CU02.2: proyecto de campo del encuestador (opcional).
+    proyectoId: z.coerce.number().int().positive().optional(),
     dispositivo: z.string().trim().max(60).default('web'),
   })
   .partial({ dispositivo: true });

@@ -2,6 +2,7 @@ const express = require('express');
 const {
   cambiarEstadoVacacion,
   crearSolicitudVacacion,
+  devengarVacaciones,
   opcionesSolicitud,
 } = require('../application/vacaciones.usecase');
 const esquemas = require('./esquemas');
@@ -30,8 +31,19 @@ function rutasEmpleado(ctx) {
   const { prisma, bus } = ctx;
   const router = express.Router();
 
+  // Devengo perezoso e idempotente: garantiza que el empleado tenga sus
+  // periodos/saldos aunque el cron nocturno no haya corrido (free tier).
+  async function asegurarDevengo(empleadoId) {
+    try {
+      await devengarVacaciones({ prisma, empleadoId });
+    } catch (error) {
+      console.error('[vacaciones] Devengo perezoso fallo:', error.message);
+    }
+  }
+
   router.get('/vacaciones/saldos', exigirPermiso('vacaciones:leer'), async (req, res, next) => {
     try {
+      await asegurarDevengo(req.user.empleado_id);
       const periodos = await prisma.periodoVacacional.findMany({ where: { empleadoId: req.user.empleado_id }, include: { movimientos: true }, orderBy: { hasta: 'desc' } });
       res.json(periodos.map((periodo) => ({ ...periodo, saldo: periodo.movimientos.reduce((total, movimiento) => total + movimiento.dias, 0) })));
     } catch (error) { next(error); }

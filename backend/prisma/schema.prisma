@@ -222,8 +222,9 @@ model Proyecto {
   activo         Boolean  @default(true)
   creadoEn       DateTime @default(now())
 
-  departamento Departamento?        @relation(fields: [departamentoId], references: [id], onDelete: SetNull)
-  asignaciones AsignacionProyecto[]
+    departamento Departamento?        @relation(fields: [departamentoId], references: [id], onDelete: SetNull)
+    asignaciones AsignacionProyecto[]
+    marcajes     Marcaje[]
 
   @@index([departamentoId, activo])
 }
@@ -308,22 +309,26 @@ model HorarioEmpleado {
 
 /// Evento crudo de marcaje. Inmutable (trigger); el consolidado es derivado.
 model Marcaje {
-  id            Int      @id @default(autoincrement())
-  empleadoId    Int
-  empleado      Empleado @relation(fields: [empleadoId], references: [id])
-  ocurridoEn    DateTime
-  tipo          String // ENTRADA | SALIDA
-  origen        String   @default("WEB") // WEB | MANUAL | IMPORTADO | BIOMETRICO
-  dispositivo   String?
-  latitud       Float?
-  longitud      Float?
-  registradoPor Int? /// obligatorio cuando origen = MANUAL
-  hashEvento    String   @unique /// idempotencia: sha256(empleado|momento|tipo)
-  creadoEn      DateTime @default(now())
+    id            Int       @id @default(autoincrement())
+    empleadoId    Int
+    empleado      Empleado  @relation(fields: [empleadoId], references: [id])
+    ocurridoEn    DateTime
+    tipo          String // ENTRADA | SALIDA
+    origen        String    @default("WEB") // WEB | MOVIL | MANUAL | IMPORTADO | BIOMETRICO
+    dispositivo   String?
+    latitud       Float?
+    longitud      Float?
+    /// RF-16 / CU02.2: proyecto de campo al que pertenece el marcaje del encuestador.
+    proyectoId    Int?
+    proyecto      Proyecto? @relation(fields: [proyectoId], references: [id])
+    registradoPor Int?      /// obligatorio cuando origen = MANUAL
+    hashEvento    String    @unique /// idempotencia: sha256(empleado|momento|tipo)
+    creadoEn      DateTime  @default(now())
 
-  @@index([empleadoId, ocurridoEn])
-  @@index([ocurridoEn])
-}
+    @@index([empleadoId, ocurridoEn])
+    @@index([ocurridoEn])
+    @@index([proyectoId])
+  }
 
 /// Consolidado diario derivado del marcaje; un registro por empleado y fecha.
 model RegistroAsistencia {

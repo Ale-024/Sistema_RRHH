@@ -22,9 +22,16 @@ function empleadoPublico(empleado, cifrador) {
 }
 
 const INCLUIR_EXPEDIENTE = {
-  usuario: { select: { id: true, email: true, estado: true, roles: { select: { rol: { select: { codigo: true } } } } } },
-  puesto: { include: { departamento: true } },
-};
+    usuario: { select: { id: true, email: true, estado: true, roles: { select: { rol: { select: { codigo: true } } } } } },
+    puesto: { include: { departamento: true } },
+    // Contrato vigente: fuente del salario actual (versionado por contrato).
+    contratos: {
+      where: { vigenciaHasta: null },
+      select: { salarioBaseCent: true, periodicidad: true, modalidad: true, vigenciaDesde: true },
+      take: 1,
+      orderBy: { vigenciaDesde: 'desc' },
+    },
+  };
 
 async function listarEmpleados(contextoAutorizacion, ctx) {
   const where = aplicarAlcanceEmpleado({}, contextoAutorizacion);

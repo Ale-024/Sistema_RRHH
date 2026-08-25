@@ -112,7 +112,7 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDe
   if (!beneficiario) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Usuario beneficiario no encontrado.');
 
   const yaVigente = await prisma.autorizacionRol.findFirst({
-    where: { beneficiarioId, rolId: rol.id, estado: 'AUTORIZADA', consumidaEn: null },
+    where: { beneficiarioId: beneficiario.id, rolId: rol.id, estado: 'AUTORIZADA', consumidaEn: null },
   });
   if (yaVigente) {
     throw new ErrorAplicacion(
@@ -125,7 +125,7 @@ async function solicitarAutorizacion({ beneficiarioId, email, rolCodigo, scopeDe
   const venceEn = new Date(Date.now() + VIGENCIA_AUTORIZACION_DIAS * 24 * 60 * 60 * 1000);
   const solicitud = await prisma.autorizacionRol.create({
     data: {
-      beneficiarioId,
+      beneficiarioId: beneficiario.id,
       rolId: rol.id,
       scopeDepartamentoId: scopeDepartamentoId ?? null,
       solicitadaPorId: ejecutor.id,

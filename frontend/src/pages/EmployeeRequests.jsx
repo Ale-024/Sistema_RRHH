@@ -13,11 +13,18 @@ const ESTADOS = {
 const inicial = { id: null, tipoPermisoId: '', fechaInicio: '', fechaFin: '', motivo: '', soporteRuta: '' };
 
 const getReturnReason = (request) => {
-  if (request.estado !== 'SOLICITADO' || !request.historial) return null;
-  const devuelto = [...request.historial].reverse().find(
-    (h) => h.estadoAnterior === 'EN_REVISION' && h.estadoNuevo === 'SOLICITADO'
-  );
-  return devuelto?.motivo || null;
+    if (request.estado !== 'SOLICITADO' || !request.historial) return null;
+    const devuelto = [...request.historial].reverse().find(
+      (h) => h.estadoAnterior === 'EN_REVISION' && h.estadoNuevo === 'SOLICITADO'
+    );
+    return devuelto?.motivo || null;
+  };
+
+  // Motivo del rechazo: ultima transicion a RECHAZADO en el historial.
+  const getRechazoMotivo = (request) => {
+    if (request.estado !== 'RECHAZADO' || !request.historial) return null;
+    const rechazo = [...request.historial].reverse().find((h) => h.estadoNuevo === 'RECHAZADO');
+    return rechazo?.motivo || request.observacionRevision || null;
 };
 
 export default function EmployeeRequests() {
@@ -165,6 +172,9 @@ export default function EmployeeRequests() {
                       <div className="truncate">{request.motivo}</div>
                       {getReturnReason(request) && (
                         <div className="mt-1 text-xs font-medium text-orange-600">Devuelto: {getReturnReason(request)}</div>
+                      )}
+                      {getRechazoMotivo(request) && (
+                        <div className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">Motivo del rechazo: {getRechazoMotivo(request)}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">{status(request.estado)}</td>
