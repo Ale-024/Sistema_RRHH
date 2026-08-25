@@ -55,6 +55,18 @@ function rutasEmpleado(ctx) {
     } catch (error) { next(error); }
   });
 
+  // Catalogo de posibles suplentes para el formulario del empleado.
+  router.get('/vacaciones/suplentes', exigirPermiso('vacaciones:crear'), async (req, res, next) => {
+    try {
+      const suplentes = await prisma.empleado.findMany({
+        where: { estadoLaboral: 'ACTIVO', id: { not: req.user.empleado_id } },
+        select: { id: true, nombres: true, apellidos: true },
+        orderBy: [{ apellidos: 'asc' }, { nombres: 'asc' }],
+      });
+      res.json(suplentes);
+    } catch (error) { next(error); }
+  });
+
   router.post('/vacaciones/solicitudes', exigirPermiso('vacaciones:crear'), validar({ body: esquemas.crearSolicitud }), async (req, res, next) => {
     try {
       const solicitud = await crearSolicitudVacacion({ prisma, empleadoId: req.user.empleado_id, usuarioId: req.user.id, datos: req.body, ip: req.ip });

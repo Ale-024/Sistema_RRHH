@@ -189,6 +189,20 @@ async function crearSolicitudVacacion({ prisma, empleadoId, usuarioId, datos, ip
       const suplente = await tx.empleado.findFirst({ where: { id: datos.suplenteId, estadoLaboral: 'ACTIVO' }, select: { id: true } });
       if (!suplente) throw new ErrorAplicacion('SUPLENTE_INVALIDO', 422, 'El suplente no existe o no esta activo.');
     }
+    // Sin solicitudes activas que se crucen en fechas: evita duplicados por
+    // reintentos del mismo rango mientras la anterior espera revision.
+    const cruce = await tx.solicitudVacacion.findFirst({
+      where: {
+        empleadoId,
+        estado: { in: ['SOLICITADO', 'EN_REVISION'] },
+        fechaInicio: { lte: fechaFin },
+        fechaFin: { gte: fechaInicio },
+      },
+      select: { folio: true },
+    });
+    if (cruce) {
+      throw new ErrorAplicacion('SOLICITUD_DUPLICADA', 409, `Ya tienes una solicitud activa (${cruce.folio}) que se cruza con esas fechas: cancelala o espera su revision.`);
+    }
     const saldo = await obtenerSaldo(tx, periodo.id);
     if (saldo < dias) throw new ErrorAplicacion('SALDO_VACACIONES_INSUFICIENTE', 409, 'El saldo vacacional disponible es insuficiente.');
     const folio = `VAC-${fechaInicio.getFullYear()}-${Date.now().toString().slice(-8)}`;

@@ -67,6 +67,10 @@ describe('Fase 5: vacaciones', () => {
     expect(creada.status).toBe(201);
     const enviada = await request(app).post(`/api/employee/vacaciones/solicitudes/${creada.body.data.id}/enviar`).set('Authorization', `Bearer ${empleadoToken}`).send({});
     expect(enviada.status).toBe(200);
+    // Sin duplicados: un segundo rango que se cruza con la solicitud activa se rechaza.
+    const duplicada = await request(app).post('/api/employee/vacaciones/solicitudes').set('Authorization', `Bearer ${empleadoToken}`).send({ periodoId: periodo.id, fechaInicio: '2026-02-04', fechaFin: '2026-02-06' });
+    expect(duplicada.status).toBe(409);
+    expect(duplicada.body.message).toMatch(/activa/i);
     const aprobada = await request(app).post(`/api/admin/vacaciones/solicitudes/${creada.body.data.id}/aprobar`).set('Authorization', `Bearer ${rrhhToken}`).send({});
     expect(aprobada.status).toBe(200);
     expect(aprobada.body.data.estado).toBe('APROBADO');
