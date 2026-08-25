@@ -62,9 +62,28 @@ export default function Layout() {
     { name: 'Mi perfil', path: '/employee/profile', icon: User },
   ].filter((l) => !l.permiso || tienePermiso(user, l.permiso));
 
-  const links = esRolAdministrativo(user)
-    ? [...adminLinks, ...autoservicioAdmin]
-    : employeeLinks;
+  const isAdmin = esRolAdministrativo(user);
+
+  const renderLink = (link) => {
+    const Icon = link.icon;
+    const isActive = location.pathname === link.path || (location.pathname.startsWith(link.path) && link.path !== '/admin' && link.path !== '/employee');
+    return (
+      <Link
+        key={`${link.path}-${link.name}`}
+        to={link.path}
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`
+                  flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors
+                  ${isActive
+            ? 'bg-white/10 text-white border-l-2 border-brand-200'
+            : 'text-slate-300 hover:bg-white/5 hover:text-white'}
+                `}
+      >
+        <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-brand-200' : 'text-slate-400'}`} />
+        {link.name}
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex transition-colors">
@@ -110,27 +129,19 @@ export default function Layout() {
         </div>
 
         <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-145px)]">
-          {links.map((link) => {
-            const Icon = link.icon;
-            const isActive = location.pathname === link.path || (location.pathname.startsWith(link.path) && link.path !== '/admin' && link.path !== '/employee');
-            
-            return (
-              <Link
-                key={link.name}
-                to={link.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`
-                  flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors
-                  ${isActive
-                    ? 'bg-white/10 text-white border-l-2 border-brand-200'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'}
-                `}
-              >
-                <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-brand-200' : 'text-slate-400'}`} />
-                {link.name}
-              </Link>
-            );
-          })}
+          {!isAdmin ? (
+            employeeLinks.map(renderLink)
+          ) : (
+            <>
+              {adminLinks.map(renderLink)}
+              {adminLinks.length > 0 && autoservicioAdmin.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-white/10">
+                  <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest uppercase text-slate-500">Mi espacio</p>
+                </div>
+              )}
+              {autoservicioAdmin.map(renderLink)}
+            </>
+          )}
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
