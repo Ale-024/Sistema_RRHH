@@ -22,10 +22,12 @@ const NOMBRES_ROL = {
   DIRECCION: 'Dirección general',
 };
 const SOLICITABLES_POR_ROL = {
-  RRHH_SUP: ['GERENTE_DEPTO'],
+  RRHH_SUP: ['EMPLEADO', 'ENCUESTADOR', 'GERENTE_DEPTO'],
   DIRECCION: ['RRHH_SUP', 'DIRECCION'],
   ADMIN_TI: ['ADMIN_TI'],
 };
+// Roles base: no exigen ciclo de autorizacion; TI ejecuta la solicitud directo.
+const ROLES_SIN_CICLO = ['EMPLEADO', 'ENCUESTADOR'];
 
 export default function AdminUsuarios() {
   const { user } = useAuthStore();
@@ -275,7 +277,7 @@ export default function AdminUsuarios() {
                     </td>
                     <td className="px-6 py-3 text-xs">{a.venceEn ? new Date(a.venceEn).toLocaleString('es-HN') : '—'}</td>
                     <td className="px-6 py-3 text-right">
-                      {a.estado === 'SOLICITADA' && puedeDecidir ? (
+                      {a.estado === 'SOLICITADA' && puedeDecidir && !ROLES_SIN_CICLO.includes(a.rol?.codigo) ? (
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => decidir(a.id, 'AUTORIZADA')}
@@ -292,6 +294,14 @@ export default function AdminUsuarios() {
                             <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
                           </button>
                         </div>
+                      ) : a.estado === 'SOLICITADA' && ROLES_SIN_CICLO.includes(a.rol?.codigo) && puedeGestionar ? (
+                        <button
+                          onClick={() => ejecutarAutorizacion(a)}
+                          disabled={Boolean(procesando)}
+                          className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          <UserCog className="w-3.5 h-3.5 mr-1" /> Asignar (rol base)
+                        </button>
                       ) : a.estado === 'AUTORIZADA' && !a.consumidaEn && puedeGestionar ? (
                         <button
                           onClick={() => ejecutarAutorizacion(a)}

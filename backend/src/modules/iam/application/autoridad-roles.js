@@ -46,15 +46,8 @@ function validarSolicitud(rolesSolicitante, codigoRolObjetivo) {
   if (!permitidos) {
     throw new ErrorAplicacion('ROL_INVALIDO', 422, 'El rol indicado no existe.');
   }
-  // Los roles base (nivel <= 10) no pasan por el ciclo de autorizacion:
-  // se asignan directamente desde la gestion de cuentas (ADMIN_TI).
-  if (!ROLES_CON_AUTORIZACION.includes(codigoRolObjetivo)) {
-    throw new ErrorAplicacion(
-      'ROL_SIN_CICLO',
-      422,
-      `El rol ${codigoRolObjetivo} es base y se asigna directamente desde la gestion de cuentas, sin ciclo de autorizacion.`
-    );
-  }
+  // Los roles base (nivel <= 10) no exigen autorizacion: su solicitud se
+  // ejecuta directamente por ADMIN_TI (validarEjecucion los exime del ciclo).
   if (!tieneAlgunRol(rolesSolicitante, permitidos)) {
     throw new ErrorAplicacion(
       'MATRIZ_SOLICITUD_DENEGADA',
