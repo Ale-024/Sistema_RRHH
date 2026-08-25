@@ -49,15 +49,18 @@ async function asignarRol(usuarioId, { rolCodigo, scopeDepartamentoId, autorizac
     autorizacionId,
   });
 
-  await prisma.usuarioRol.upsert({
-    where: { usuarioId_rolId: { usuarioId, rolId: rol.id } },
-    update: { scopeDepartamentoId: scopeDepartamentoId ?? null, asignadoPorId: ejecutor.id },
-    create: {
-      usuarioId,
-      rolId: rol.id,
-      scopeDepartamentoId: scopeDepartamentoId ?? null,
-      asignadoPorId: ejecutor.id,
-    },
+  // Un solo rol por persona: el nuevo rol REEMPLAZA los anteriores.
+  // INV7 (trigger) protege al ultimo ADMIN_TI/DIRECCION de ser degradado.
+  await prisma.$transaction(async (tx) => {
+    await tx.usuarioRol.deleteMany({ where: { usuarioId } });
+    await tx.usuarioRol.create({
+      data: {
+        usuarioId,
+        rolId: rol.id,
+        scopeDepartamentoId: scopeDepartamentoId ?? null,
+        asignadoPorId: ejecutor.id,
+      },
+    });
   });
 
   // Cierra el ciclo: la autorizacion queda CONSUMIDA y desaparece de la
