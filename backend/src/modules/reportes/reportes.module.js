@@ -54,16 +54,32 @@ function sufijoPeriodo(consulta = {}) {
   return consulta.mes ? `-${anio}-${String(consulta.mes).padStart(2, '0')}` : `-${anio}`;
 }
 
+// Etiquetas legibles para los encabezados del PDF/XLSX.
+const ETIQUETAS = {
+  anio: 'Año', mes: 'Mes', empleadoId: 'ID', empleado: 'Empleado', departamento: 'Depto.',
+  diasPresente: 'Presentes', diasAusente: 'Ausentes', diasTardanza: 'Tardanzas',
+  minutosTardanza: 'Min. tarde', pctAusentismo: '% Ausent.',
+  codigo: 'Código', proyecto: 'Proyecto', personal: 'Personal', porcentajeDedicacion: '% Dedic.',
+  brutoHnl: 'Bruto (L)', deduccionesHnl: 'Deducc. (L)', netoHnl: 'Neto (L)', aportesPatronalesHnl: 'Aportes (L)',
+};
+
+function etiquetar(filas) {
+  return filas.map((fila) => Object.fromEntries(
+    Object.entries(fila).map(([clave, valor]) => [ETIQUETAS[clave] ?? clave, valor])
+  ));
+}
+
 function responderReporte(res, nombre, filas, formato, consulta = {}) {
   if (formato === 'json') return res.json({ data: filas, total: filas.length });
+  const filasEtiquetadas = etiquetar(filas);
   const archivo = `${nombre}${sufijoPeriodo(consulta)}`;
   if (formato === 'xlsx') {
     return res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      .set('Content-Disposition', `attachment; filename="${archivo}.xlsx"`).send(crearXlsx(filas));
+      .set('Content-Disposition', `attachment; filename="${archivo}.xlsx"`).send(crearXlsx(filasEtiquetadas));
   }
   return res.type('application/pdf')
     .set('Content-Disposition', `attachment; filename="${archivo}.pdf"`)
-    .send(crearPdfReporte(nombre, filas, { periodo: periodoTexto(consulta) }));
+    .send(crearPdfReporte(nombre, filasEtiquetadas, { periodo: periodoTexto(consulta) }));
 }
 
 function rutasReportes(ctx) {

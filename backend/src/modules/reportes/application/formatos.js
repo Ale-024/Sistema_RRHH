@@ -68,7 +68,27 @@ function escaparPdf(texto) {
 
 function truncarPdf(texto, maxCaracteres) {
   const limpio = String(texto ?? '');
-  return limpio.length <= maxCaracteres ? limpio : `${limpio.slice(0, Math.max(1, maxCaracteres - 1))}…`.replace('…', '..');
+  return limpio.length <= maxCaracteres ? limpio : `${limpio.slice(0, Math.max(1, maxCaracteres - 1))}..`;
+}
+
+// Estimacion de ancho Helvetica: mayusculas ~0.66em, minusculas ~0.52em.
+function anchoTexto(texto, tamano) {
+  let ancho = 0;
+  for (const ch of String(texto)) {
+    ancho += (ch === ch.toUpperCase() && ch !== ch.toLowerCase() ? 0.66 : 0.52) * tamano;
+  }
+  return ancho;
+}
+
+// Trunca por ANCHO real (pt), no por numero de caracteres: evita encimados.
+function truncarAncho(texto, anchoMax, tamano) {
+  const limpio = String(texto ?? '');
+  if (anchoTexto(limpio, tamano) <= anchoMax) return limpio;
+  let cortado = limpio;
+  while (cortado.length > 1 && anchoTexto(`${cortado}..`, tamano) > anchoMax) {
+    cortado = cortado.slice(0, -1);
+  }
+  return `${cortado}..`;
 }
 
 function fechaLarga(fecha = new Date()) {
@@ -93,7 +113,7 @@ function crearPdfReporte(titulo, filas, meta = {}) {
   const columnas = [...new Set(filas.flatMap((fila) => Object.keys(fila)))];
   const anchoCol = tablaAncho / Math.max(columnas.length, 1);
   const tamanoCelda = columnas.length > 7 ? 6.5 : 8;
-  const maxCaracteres = Math.max(6, Math.floor((anchoCol - 8) / (tamanoCelda * 0.5)));
+  const tamanoEncabezado = columnas.length > 7 ? 6.5 : 7.5;
   const filaAlto = 16;
   const tablaY = altoPagina - 128;
   const filasPorPagina = Math.floor((tablaY - 60) / filaAlto);
@@ -124,7 +144,7 @@ function crearPdfReporte(titulo, filas, meta = {}) {
     let y = tablaY;
     ops.push(`${PDF_GRIS_BANDA} rg`, `${margenX} ${y - filaAlto + 5} ${tablaAncho} ${filaAlto} re f`);
     columnas.forEach((columna, i) => {
-      ops.push(celdaPdf(truncarPdf(String(columna).toUpperCase(), maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F2', 8, '0.10 0.15 0.12'));
+      ops.push(celdaPdf(truncarAncho(String(columna).toUpperCase(), anchoCol - 8, tamanoEncabezado), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F2', tamanoEncabezado, '0.10 0.15 0.12'));
     });
 
     // Filas alternadas
@@ -134,7 +154,7 @@ function crearPdfReporte(titulo, filas, meta = {}) {
         ops.push(`${PDF_GRIS_FILA} rg`, `${margenX} ${y - filaAlto + 5} ${tablaAncho} ${filaAlto} re f`);
       }
       columnas.forEach((columna, i) => {
-        ops.push(celdaPdf(truncarPdf(fila[columna], maxCaracteres), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F1', tamanoCelda, PDF_TEXTO));
+        ops.push(celdaPdf(truncarAncho(fila[columna], anchoCol - 8, tamanoCelda), margenX + 5 + i * anchoCol, y - filaAlto + 10, 'F1', tamanoCelda, PDF_TEXTO));
       });
       y -= filaAlto;
     });
