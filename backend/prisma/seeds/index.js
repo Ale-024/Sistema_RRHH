@@ -142,6 +142,42 @@ async function sembrarAdmin() {
   });
 }
 
+// Cuenta de Direccion general. Es el "acto de instalacion" del Anexo (sec. 3):
+// el primer DIRECCION se siembra con actor SISTEMA (asignadoPorId null, exento
+// de INV3) porque sin ella nadie podria autorizar los demas roles elevados.
+async function sembrarDireccion() {
+  if (await prisma.usuario.findUnique({ where: { email: 'direccion@sistemarrhh.com' } })) {
+    return; // direccion ya sembrada
+  }
+
+  const rolDireccion = await prisma.rol.findUnique({ where: { codigo: 'DIRECCION' } });
+  const puesto = await prisma.puesto.findFirst({ where: { titulo: 'Director General' } });
+
+  const hashedPassword = await bcrypt.hash('Direccion#2026', COSTE_BCRYPT);
+
+  await prisma.usuario.create({
+    data: {
+      email: 'direccion@sistemarrhh.com',
+      password_hash: hashedPassword,
+      estado: 'ACTIVO',
+      debeCambiarPassword: true,
+      empleado: {
+        create: {
+          ...(puesto ? { puesto_id: puesto.id } : {}),
+          nombres: 'Direccion',
+          apellidos: 'General',
+          dni: '88888888A',
+          dni_hmac: cifrador.hmac('88888888A'),
+          fecha_ingreso: new Date(),
+        },
+      },
+      roles: {
+        create: [{ rolId: rolDireccion.id }],
+      },
+    },
+  });
+}
+
 // Cuenta tecnica de administracion de TI (sin datos de negocio).
 // La gestion de usuarios/roles/parametros vive aqui, separada del RRHH.
 async function sembrarCuentaTecnica() {
@@ -188,6 +224,8 @@ async function main() {
   await sembrarParametrosLegales();
   console.log('Sembrando administrador inicial...');
   await sembrarAdmin();
+  console.log('Sembrando cuenta de Direccion general (acto de instalacion)...');
+  await sembrarDireccion();
   console.log('Sembrando cuenta tecnica de TI...');
   await sembrarCuentaTecnica();
   console.log('Seed completado.');
