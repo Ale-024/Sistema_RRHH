@@ -120,7 +120,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 shadow-sm">
             <div className="h-1 bg-brand-blue" />
             <div className="p-8 lg:p-10">
               <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Iniciar sesión</h1>

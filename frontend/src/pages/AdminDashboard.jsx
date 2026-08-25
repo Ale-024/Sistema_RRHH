@@ -3,55 +3,67 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
 import { tieneAlgunPermiso, tienePermiso } from '../shared/roles';
+import {
+  Users, CalendarClock, FileText, CalendarDays, Receipt, Scale, Shield,
+  BarChart3, ChevronRight, UserRound, AlarmClock, FileWarning,
+} from 'lucide-react';
 
-const ACCESOS = [
+const MODULOS = [
   {
     titulo: 'Empleados',
     descripcion: 'Expedientes, contratos y altas de personal.',
     ruta: '/admin/employees',
     permisos: ['empleados:leer'],
+    icono: Users,
   },
   {
     titulo: 'Asistencia',
     descripcion: 'Marcajes del día, importación y cierre diario.',
     ruta: '/admin/attendance',
     permisos: ['asistencia:leer_global'],
+    icono: CalendarClock,
   },
   {
     titulo: 'Solicitudes',
     descripcion: 'Permisos pendientes de revisión y aprobación.',
     ruta: '/admin/requests',
     permisos: ['solicitudes:revisar', 'solicitudes:leer_global'],
+    icono: FileText,
   },
   {
     titulo: 'Vacaciones',
     descripcion: 'Saldos, solicitudes y aprobaciones.',
     ruta: '/admin/vacations',
     permisos: ['vacaciones:aprobar', 'vacaciones:leer_global'],
+    icono: CalendarDays,
   },
   {
     titulo: 'Nómina',
     descripcion: 'Periodos de planilla y cálculo.',
     ruta: '/admin/payroll',
     permisos: ['planilla:leer_global'],
+    icono: Receipt,
   },
   {
     titulo: 'Parámetros legales',
-    descripcion: 'Vigencias de salario mínimo, INSS e IR.',
+    descripcion: 'Vigencias de salario mínimo, IHSS, RAP e ISR.',
     ruta: '/admin/parameters',
     permisos: ['parametros:leer'],
+    icono: Scale,
   },
   {
     titulo: 'Usuarios y roles',
     descripcion: 'Cuentas, autorizaciones de rol elevado y bitácora.',
     ruta: '/admin/usuarios',
     permisos: ['usuarios:administrar', 'autorizaciones:decidir', 'solicitudes:revisar'],
+    icono: Shield,
   },
   {
     titulo: 'Reportes',
     descripcion: 'Asistencia, ausentismo y personal por proyecto.',
     ruta: '/admin/reports',
     permisos: ['reportes:ver', 'reportes:ver_global'],
+    icono: BarChart3,
   },
 ];
 
@@ -107,70 +119,120 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const accesos = ACCESOS.filter((a) => tieneAlgunPermiso(user, a.permisos));
+  const modulos = MODULOS.filter((m) => tieneAlgunPermiso(user, m.permisos));
+
+  const indicadores = [];
+  if (tienePermiso(user, 'empleados:leer')) {
+    indicadores.push({
+      etiqueta: 'Empleados registrados',
+      valor: stats.empleados ?? '—',
+      icono: UserRound,
+      ruta: '/admin/employees',
+      enlace: 'Gestionar',
+      acento: 'border-t-blue-700',
+    });
+  }
+  if (tienePermiso(user, 'solicitudes:revisar')) {
+    indicadores.push({
+      etiqueta: 'Solicitudes pendientes',
+      valor: stats.solicitudesPendientes ?? '—',
+      icono: FileWarning,
+      ruta: '/admin/requests',
+      enlace: 'Revisar bandeja',
+      acento: 'border-t-amber-600',
+    });
+  }
+  if (tienePermiso(user, 'planilla:leer_global')) {
+    indicadores.push({
+      etiqueta: 'Nóminas por cerrar o pagar',
+      valor: stats.planillasPendientes ?? '—',
+      icono: AlarmClock,
+      ruta: '/admin/payroll',
+      enlace: 'Ir a planilla',
+      acento: 'border-t-[#1f3d2b] dark:border-t-emerald-700',
+    });
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Panel de administración</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          {user?.nombres} {user?.apellidos} · {fechaHoy()}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700">
-        {tienePermiso(user, 'empleados:leer') && (
-          <div className="bg-white dark:bg-slate-800 p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Empleados registrados
-            </p>
-            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
-              {stats.empleados ?? '—'}
-            </p>
-          </div>
-        )}
-        {tienePermiso(user, 'solicitudes:revisar') && (
-          <div className="bg-white dark:bg-slate-800 p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Solicitudes pendientes
-            </p>
-            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
-              {stats.solicitudesPendientes ?? '—'}
-            </p>
-          </div>
-        )}
-        {tienePermiso(user, 'planilla:leer_global') && (
-          <div className="bg-white dark:bg-slate-800 p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Nóminas por aprobar o pagar
-            </p>
-            <p className="text-3xl font-semibold text-slate-800 dark:text-slate-100 mt-2">
-              {stats.planillasPendientes ?? '—'}
-            </p>
-            <Link to="/admin/payroll" className="text-sm text-brand-blue hover:underline mt-1 inline-block">
-              Revisar planilla
-            </Link>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-          Accesos
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {accesos.map((a) => (
-            <Link
-              key={a.ruta}
-              to={a.ruta}
-              className="block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 hover:border-brand-blue transition-colors"
-            >
-              <p className="font-medium text-slate-800 dark:text-slate-100">{a.titulo}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{a.descripcion}</p>
-            </Link>
-          ))}
+    <div className="space-y-7">
+      {/* Encabezado institucional */}
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1f3d2b] dark:text-emerald-500">
+            Marketing Total · Gestión Humana
+          </p>
+          <h1 className="mt-1.5 font-serif text-[26px] leading-tight font-semibold text-slate-900 dark:text-slate-50">
+            Panel de administración
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {user?.nombres} {user?.apellidos}
+            <span className="mx-2 text-slate-300 dark:text-slate-600">|</span>
+            <span className="first-letter:uppercase">{fechaHoy()}</span>
+          </p>
         </div>
-      </div>
+      </header>
+
+      {/* Indicadores */}
+      {indicadores.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {indicadores.map((ind) => {
+            const Icono = ind.icono;
+            return (
+              <div
+                key={ind.etiqueta}
+                className={`rounded-lg border border-t-2 border-slate-200 ${ind.acento} dark:border-slate-800 dark:bg-slate-900 bg-white p-5`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    {ind.etiqueta}
+                  </p>
+                  <Icono className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                </div>
+                <p className="mt-3 text-[32px] leading-none font-semibold tabular-nums text-slate-900 dark:text-white">
+                  {ind.valor}
+                </p>
+                <Link
+                  to={ind.ruta}
+                  className="mt-3 inline-flex items-center gap-0.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-[#1f3d2b] dark:hover:text-emerald-400 transition-colors"
+                >
+                  {ind.enlace}
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modulos */}
+      <section>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400 mb-3">
+          Módulos del sistema
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {modulos.map((m) => {
+            const Icono = m.icono;
+            return (
+              <Link
+                key={m.ruta}
+                to={m.ruta}
+                className="group flex flex-col justify-between rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 min-h-[104px] hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="inline-flex w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 items-center justify-center">
+                    <Icono className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-[#1f3d2b] dark:group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{m.titulo}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{m.descripcion}</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
