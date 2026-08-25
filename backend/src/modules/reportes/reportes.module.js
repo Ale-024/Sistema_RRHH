@@ -36,13 +36,34 @@ function filasPlanillas(filas) {
   }));
 }
 
-function responderReporte(res, nombre, filas, formato) {
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function periodoTexto(consulta = {}) {
+  const anio = consulta.anio ?? new Date().getFullYear();
+  if (consulta.mes) return `${MESES[consulta.mes - 1]} ${anio}`;
+  if (consulta.desde || consulta.hasta) {
+    const desde = consulta.desde ? new Date(consulta.desde).toLocaleDateString('es-HN') : 'inicio';
+    const hasta = consulta.hasta ? new Date(consulta.hasta).toLocaleDateString('es-HN') : 'hoy';
+    return `${desde} al ${hasta}`;
+  }
+  return `año ${anio}`;
+}
+
+function sufijoPeriodo(consulta = {}) {
+  const anio = consulta.anio ?? new Date().getFullYear();
+  return consulta.mes ? `-${anio}-${String(consulta.mes).padStart(2, '0')}` : `-${anio}`;
+}
+
+function responderReporte(res, nombre, filas, formato, consulta = {}) {
   if (formato === 'json') return res.json({ data: filas, total: filas.length });
+  const archivo = `${nombre}${sufijoPeriodo(consulta)}`;
   if (formato === 'xlsx') {
     return res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      .set('Content-Disposition', `attachment; filename="${nombre}.xlsx"`).send(crearXlsx(filas));
+      .set('Content-Disposition', `attachment; filename="${archivo}.xlsx"`).send(crearXlsx(filas));
   }
-  return res.type('application/pdf').set('Content-Disposition', `inline; filename="${nombre}.pdf"`).send(crearPdfReporte(nombre, filas));
+  return res.type('application/pdf')
+    .set('Content-Disposition', `attachment; filename="${archivo}.pdf"`)
+    .send(crearPdfReporte(nombre, filas, { periodo: periodoTexto(consulta) }));
 }
 
 function rutasReportes(ctx) {
@@ -86,20 +107,20 @@ function rutasReportes(ctx) {
         diasPresente: fila.diasPresente, diasAusente: fila.diasAusente,
         diasTardanza: fila.diasTardanza, minutosTardanza: fila.minutosTardanza,
         pctAusentismo: fila.pctAusentismo,
-      })), req.query.formato);
+      })), req.query.formato, req.query);
     } catch (error) { next(error); }
   });
 
   router.get('/ausentismo', validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { await asegurarProyecciones(req.query); responderReporte(res, 'ausentismo', await reportes.ausentismo(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'ausentismo', await reportes.ausentismo(req.query, req.contexto, ctx), req.query.formato, req.query); } catch (error) { next(error); }
   });
 
   router.get('/personal-por-proyecto', validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { await asegurarProyecciones(req.query); responderReporte(res, 'personal-por-proyecto', await reportes.personalPorProyecto(req.query, req.contexto, ctx), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'personal-por-proyecto', await reportes.personalPorProyecto(req.query, req.contexto, ctx), req.query.formato, req.query); } catch (error) { next(error); }
   });
 
   router.get('/costo-planilla', exigirPermiso('reportes:ver_global'), validar({ query: esquemaConsulta }), async (req, res, next) => {
-    try { await asegurarProyecciones(req.query); responderReporte(res, 'costo-planilla', filasPlanillas(await reportes.costoPlanilla(req.query, req.contexto, ctx)), req.query.formato); } catch (error) { next(error); }
+    try { await asegurarProyecciones(req.query); responderReporte(res, 'costo-planilla', filasPlanillas(await reportes.costoPlanilla(req.query, req.contexto, ctx)), req.query.formato, req.query); } catch (error) { next(error); }
   });
 
   router.get('/empleados/buscar', validar({ query: esquemaTexto }), async (req, res, next) => {
