@@ -58,8 +58,11 @@ const crearEmpleado = z.object({
 
 const actualizarEmpleado = z
   .object({
+    email: z.string().trim().email('Correo invalido').optional(),
     nombres: z.string().trim().min(1).optional(),
     apellidos: z.string().trim().min(1).optional(),
+    dni: dniHonduras.optional(),
+    fecha_ingreso: z.coerce.date().optional(),
     telefono: telefonoHonduras,
     direccion: z.string().trim().max(255).optional(),
     puesto_id: z.coerce.number().int().positive().optional(),

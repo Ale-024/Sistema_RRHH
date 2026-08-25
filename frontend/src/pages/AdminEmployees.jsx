@@ -99,7 +99,11 @@ export default function AdminEmployees() {
         puesto_id: Number(formData.puesto_id),
       };
       if (editingEmployee) {
-        await api.put(`/admin/employees/${editingEmployee.id}`, base);
+        await api.put(`/admin/employees/${editingEmployee.id}`, {
+          ...base,
+          dni: formData.dni,
+          fecha_ingreso: formData.fecha_ingreso,
+        });
         // El salario vive en el contrato: si cambia, se emite un contrato
         // nuevo que cierra el vigente (versionado + historial laboral).
         const salarioNuevo = Number(formData.salario);

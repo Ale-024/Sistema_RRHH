@@ -145,10 +145,29 @@ async function crearEmpleado(datos, ctx) {
 
 async function actualizarEmpleado(id, datos, contextoAutorizacion, ctx) {
   const { prisma, cifrador } = ctx;
-  const anterior = await prisma.empleado.findUnique({ where: { id } });
+  const anterior = await prisma.empleado.findUnique({ where: { id }, include: { usuario: { select: { email: true } } } });
   if (!anterior) throw new ErrorAplicacion('NO_ENCONTRADO', 404, 'Empleado no encontrado.');
 
-  const { activo, ...datosEmpleado } = datos;
+  const { activo, email, ...datosEmpleado } = datos;
+
+  // El DNI tiene un HMAC derivado para busqueda exacta (@unique): si cambia
+  // la identidad, debe recomputarse o la busqueda quedaria desincronizada.
+  if (datosEmpleado.dni && datosEmpleado.dni !== anterior.dni) {
+    const colision = await prisma.empleado.findFirst({ where: { dni: datosEmpleado.dni, id: { not: id } } });
+    if (colision) {
+      throw new ErrorAplicacion('DNI_DUPLICADO', 409, 'Ya existe un empleado registrado con ese numero de identidad.');
+    }
+    datosEmpleado.dni_hmac = cifrador.hmac(datosEmpleado.dni);
+  }
+
+  if (email && email !== anterior.usuario?.email) {
+    const colision = await prisma.usuario.findFirst({ where: { email, id: { not: anterior.usuario_id } } });
+    if (colision) {
+      throw new ErrorAplicacion('EMAIL_DUPLICADO', 409, 'Ya existe un usuario con ese correo electronico.');
+    }
+    await prisma.usuario.update({ where: { id: anterior.usuario_id }, data: { email } });
+  }
+
   const empleado = await prisma.empleado.update({ where: { id }, data: datosEmpleado });
 
   if (datos.puesto_id && datos.puesto_id !== anterior.puesto_id) {
@@ -178,7 +197,15 @@ async function actualizarEmpleado(id, datos, contextoAutorizacion, ctx) {
     entidad: 'Empleado',
     entidadId: id,
     accion: 'ACTUALIZAR',
-    antes: { nombres: anterior.nombres, apellidos: anterior.apellidos, puesto_id: anterior.puesto_id },
+    antes: {
+      nombres: anterior.nombres,
+      apellidos: anterior.apellidos,
+      puesto_id: anterior.puesto_id,
+      email: anterior.usuario?.email,
+      dni: anterior.dni,
+      fecha_ingreso: anterior.fecha_ingreso,
+      telefono: anterior.telefono,
+    },
     despues: datos,
     ip: contextoAutorizacion?.ip,
     requestId: contextoAutorizacion?.requestId,
