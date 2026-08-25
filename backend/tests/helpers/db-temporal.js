@@ -92,10 +92,10 @@ async function crearBaseTemporal() {
       'organizacion:administrar', 'asistencia:leer_global',
       'asistencia:importar', 'asistencia:corregir', 'asistencia:cerrar',
       'asistencia:marcar', 'asistencia:leer_propia',
-      'solicitudes:crear', 'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'vacaciones:leer', 'vacaciones:crear', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar', 'parametros:leer', 'parametros:administrar', 'reportes:ver', 'reportes:administrar',
+      'solicitudes:crear', 'solicitudes:revisar', 'solicitudes:leer_global', 'permisos:aprobar', 'vacaciones:leer_global', 'vacaciones:aprobar', 'vacaciones:leer', 'vacaciones:crear', 'planilla:leer_global', 'planilla:leer', 'planilla:crear', 'planilla:calcular', 'planilla:administrar', 'reportes:ver', 'reportes:administrar',
     ],
     GERENTE_DEPTO: ['reportes:ver'],
-    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'reportes:ver_global', 'autorizaciones:decidir', 'asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear'],
+    DIRECCION: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'reportes:ver_global', 'autorizaciones:decidir', 'parametros:leer', 'asistencia:marcar', 'asistencia:leer_propia', 'solicitudes:crear', 'vacaciones:leer', 'vacaciones:crear'],
     ADMIN_TI: ['usuarios:administrar', 'organizacion:administrar', 'parametros:leer', 'parametros:administrar', 'auditoria:leer', 'observabilidad:leer'],
   };
 
