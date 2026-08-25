@@ -229,6 +229,65 @@ async function sembrarCuentaTecnica() {
   });
 }
 
+// Las cuentas del sistema son empleados tambien: sin contrato vigente la
+// planilla las excluye (el calculo exige contrato). Idempotente.
+const CUENTAS_SISTEMA = [
+  { email: 'admin@sistemarrhh.com', salario: 45000 },
+  { email: 'direccion@sistemarrhh.com', salario: 70000 },
+  { email: 'ia@sistemarrhh.com', salario: 35000 },
+];
+
+async function asegurarContratosSistema() {
+  for (const cuenta of CUENTAS_SISTEMA) {
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: cuenta.email },
+      include: { empleado: true },
+    });
+    if (!usuario?.empleado) continue;
+
+    const vigente = await prisma.contrato.findFirst({
+      where: { empleado_id: usuario.empleado.id, vigenciaHasta: null },
+    });
+    if (vigente) continue;
+
+    await prisma.contrato.create({
+      data: {
+        empleado_id: usuario.empleado.id,
+        modalidad: 'PERMANENTE',
+        salarioBaseCent: Math.round(cuenta.salario * 100),
+        periodicidad: 'MENSUAL',
+        aplicaIhss: true,
+        aplicaRap: true,
+        vigenciaDesde: usuario.empleado.fecha_ingreso ?? new Date(),
+      },
+    });
+  }
+}
+
+// Turno administrativo (L-V 8-17) para las cuentas del sistema: sin horario
+// asignado su asistencia consolida como DESCANSO aunque marquen.
+async function asegurarHorariosSistema() {
+  const turno = await prisma.turno.findFirst({ where: { nombre: 'Administrativo' } });
+  if (!turno) return;
+
+  for (const cuenta of CUENTAS_SISTEMA) {
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: cuenta.email },
+      include: { empleado: true },
+    });
+    if (!usuario?.empleado) continue;
+
+    const horario = await prisma.horarioEmpleado.findFirst({
+      where: { empleadoId: usuario.empleado.id, hasta: null },
+    });
+    if (!horario) {
+      await prisma.horarioEmpleado.create({
+        data: { empleadoId: usuario.empleado.id, turnoId: turno.id, desde: new Date() },
+      });
+    }
+  }
+}
+
 async function main() {
   console.log('Sembrando roles y permisos...');
   await sembrarIam();
@@ -244,6 +303,10 @@ async function main() {
   await sembrarDireccion();
   console.log('Sembrando cuenta tecnica de TI...');
   await sembrarCuentaTecnica();
+  console.log('Asegurando contratos de las cuentas del sistema...');
+  await asegurarContratosSistema();
+  console.log('Asegurando horarios de las cuentas del sistema...');
+  await asegurarHorariosSistema();
   console.log('Seed completado.');
   console.log('Admin Email: admin@sistemarrhh.com');
   console.log('Admin Password: admin123 (cambiar en produccion)');

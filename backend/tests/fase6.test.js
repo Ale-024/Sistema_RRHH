@@ -96,11 +96,11 @@ describe('Fase 6: planilla CU05', () => {
     expect(calculado.body.data.totalNetoCent).toBe(935000);
     const enviado = await request(app).post(`/api/admin/payroll/periodos/${id}/enviar-revision`).set('Authorization', `Bearer ${rrhh}`).send({});
     expect(enviado.body.data.estado).toBe('EN_APROBACION');
-    // CU05.2: el Supervisor de RRHH cierra el periodo y registra el pago.
-    const cerrado = await request(app).post(`/api/admin/payroll/periodos/${id}/cerrar`).set('Authorization', `Bearer ${rrhh}`).send({});
+    // El Supervisor calcula y envia; DIRECCION aprueba (cierra) y paga.
+    const cerrado = await request(app).post(`/api/admin/payroll/periodos/${id}/cerrar`).set('Authorization', `Bearer ${direccion}`).send({});
     expect(cerrado.status).toBe(200);
     expect(cerrado.body.data.hashCierre).toMatch(/^[a-f0-9]{64}$/);
-    const pagado = await request(app).post(`/api/admin/payroll/periodos/${id}/registrar-pago`).set('Authorization', `Bearer ${rrhh}`).send({});
+    const pagado = await request(app).post(`/api/admin/payroll/periodos/${id}/registrar-pago`).set('Authorization', `Bearer ${direccion}`).send({});
     expect(pagado.body.data.estado).toBe('PAGADA');
     const detalle = await prisma.detallePlanilla.findFirst({ where: { periodoId: id, empleadoId: datos.trabajador.empleado.id } });
     const recibo = await request(app).get(`/api/employee/payroll/recibos/${detalle.id}`).set('Authorization', `Bearer ${await login('trabajador-f6@test.hn')}`);

@@ -64,7 +64,7 @@ const ROLES = [
     codigo: 'RRHH_SUP',
     nivelAutoridad: 50,
     nombre: 'Supervisor de RRHH',
-    descripcion: 'Gestion de personal, catalogos, revision de solicitudes y procesamiento/cierre de planilla (CU01-CU05).',
+    descripcion: 'Gestion de personal, catalogos, revision de solicitudes y procesamiento de planilla (CU01-CU05); el cierre y pago los aprueba Direccion.',
     permisos: [
       'empleados:leer',
       'empleados:leer_global',
@@ -86,8 +86,6 @@ const ROLES = [
       'planilla:leer',
       'planilla:crear',
       'planilla:calcular',
-      'planilla:cerrar',
-      'planilla:registrar_pago',
       'planilla:administrar',
       'parametros:leer',
       'parametros:administrar',
@@ -106,8 +104,8 @@ const ROLES = [
     codigo: 'DIRECCION',
     nivelAutoridad: 90,
     nombre: 'Direccion general',
-    descripcion: 'Consulta consolidada de reportes y planilla (CU06.3); autoriza roles elevados. Sin operaciones operativas.',
-    permisos: ['planilla:leer_global', 'planilla:leer', 'reportes:ver_global', 'autorizaciones:decidir'],
+    descripcion: 'Aprueba y paga la planilla; consulta consolidada de reportes; autoriza roles elevados (Anexo).',
+    permisos: ['planilla:leer_global', 'planilla:leer', 'planilla:cerrar', 'planilla:registrar_pago', 'reportes:ver_global', 'autorizaciones:decidir'],
   },
   {
     codigo: 'ADMIN_TI',
